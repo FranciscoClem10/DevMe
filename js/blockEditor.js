@@ -52,13 +52,6 @@
 
   function newId() { return 'b' + (++blockIdCounter); }
 
-  function debugLog(scope, data) {
-    try {
-      if (global.__debugLog) global.__debugLog(scope, data);
-      else console.debug('[BlockEditor][' + scope + ']', data);
-    } catch (_) {}
-  }
-
   function cloneForDebug(obj) {
     try { return JSON.parse(JSON.stringify(obj)); }
     catch (_) { return String(obj); }
@@ -455,10 +448,6 @@
           dragData = { source: 'palette', type: item.type };
           e.dataTransfer.setData('text/plain', item.type);
           e.dataTransfer.effectAllowed = 'copy';
-          debugLog('palette.dragstart', {
-            type: item.type,
-            blockDefinitionJson: cloneForDebug(BLOCK_DEFS[item.type])
-          });
         });
         itemsDiv.appendChild(el);
       }
@@ -586,11 +575,6 @@
 			e.dataTransfer.setData('text/plain', blk.id);
 			e.dataTransfer.effectAllowed = 'move';
 			item.style.opacity = '0.4';
-			debugLog('workspace.dragstart', {
-				blockJson: cloneForDebug(blk),
-				from: describeArr(parentArr),
-				index: indexInParent
-			});
 		});
 		item.addEventListener('dragend', () => { item.style.opacity = '1'; });
 
@@ -765,15 +749,6 @@
       } else {
         targetArr = parentInfo.blk.children;
       }
-
-      debugLog('drop.inner', {
-        parentId,
-        parentType: parentInfo.blk.type,
-        requestedBranch: childType,
-        resolvedTarget: describeArr(targetArr),
-        insertIndex: index,
-        draggedType
-      });
       
       handleDrop(targetArr, index);
     });
@@ -801,15 +776,6 @@
       } else {
         targetArr = parentInfo.blk.children;
       }
-      debugLog('drop.empty-hint', {
-        parentId,
-        parentType: parentInfo.blk.type,
-        requestedBranch: childType,
-        resolvedTarget: describeArr(targetArr),
-        insertIndex: index,
-        draggedType
-      });
-      handleDrop(targetArr, index);
     });
   }
 
@@ -836,14 +802,7 @@
       dz.classList.remove('block-inner-dz-active');
       const parentInfo = findBlockDeep(parentId);
       if (!parentInfo) return;
-      if (!parentInfo.blk.elseIfs) parentInfo.blk.elseIfs = [];
-      debugLog('drop.elseif', {
-        parentId,
-        parentType: parentInfo.blk.type,
-        insertIndex: index,
-        draggedType: type,
-        target: describeArr(parentInfo.blk.elseIfs)
-      });
+      if (!parentInfo.blk.elseIfs) parentInfo.blk.elseIfs = [];     
       handleDrop(parentInfo.blk.elseIfs, index);
     });
     return dz;
@@ -855,12 +814,6 @@
       if (nb) {
         saveUndo();
         targetArr.splice(insertIdx, 0, nb);
-        debugLog('drop.insert.palette', {
-          blockJson: cloneForDebug(nb),
-          blockDefinitionJson: cloneForDebug(BLOCK_DEFS[nb.type]),
-          target: describeArr(targetArr),
-          insertIndex: insertIdx
-        });
         fullRender(); fireChange();
       }
     } else if (dragData.source === 'workspace') {
@@ -872,14 +825,6 @@
         let adjIdx = insertIdx;
         if (fromInfo.arr === targetArr && fromInfo.index < insertIdx) adjIdx--;
         targetArr.splice(adjIdx, 0, moved);
-        debugLog('drop.move.workspace', {
-          blockJson: cloneForDebug(moved),
-          from: describeArr(fromInfo.arr),
-          originalIndex: fromInfo.index,
-          target: describeArr(targetArr),
-          requestedIndex: insertIdx,
-          insertedIndex: adjIdx
-        });
         fullRender(); fireChange();
       }
     }
@@ -911,23 +856,9 @@
       const draggedType = incomingDragType();
       if (!before && rowInfo && rowInfo.blk.type === 'si' && draggedType === 'sino_si') {
         if (!rowInfo.blk.elseIfs) rowInfo.blk.elseIfs = [];
-        debugLog('drop.row.redirect-elseif', {
-          afterBlockId: rowBlockId,
-          afterBlockType: rowInfo.blk.type,
-          draggedType,
-          target: describeArr(rowInfo.blk.elseIfs),
-          insertIndex: rowInfo.blk.elseIfs.length
-        });
         handleDrop(rowInfo.blk.elseIfs, rowInfo.blk.elseIfs.length);
         return;
       }
-      debugLog('drop.row', {
-        blockId: rowBlockId,
-        before,
-        target: describeArr(parentArr),
-        insertIndex: idx,
-        draggedType
-      });
       handleDrop(parentArr, idx);
     });
   }
@@ -1080,16 +1011,7 @@
           ed.selectionStart = ed.selectionEnd = s + insertion.length;
           savedCursorPos = { start: ed.selectionStart, end: ed.selectionEnd };
           ed.dispatchEvent(new Event('input'));
-          debugLog('code.drop.insert', {
-            blockType: tmp.type,
-            blockJson: cloneForDebug(tmp),
-            blockDefinitionJson: cloneForDebug(BLOCK_DEFS[tmp.type]),
-            editorInsertPosition: s,
-            replacedUntil: end,
-            insertedAfterWord: beforeWord,
-            indentation: indentInfo,
-            insertedText: insertion
-          });
+          
           // Important: do not push the temporary block at the end of the block model.
           // The text editor is the source of truth here; parse it back so the visual
           // editor mirrors the actual insertion position.
@@ -1122,11 +1044,6 @@
         break;
       }
     }
-    debugLog('execution.highlightLine', {
-      requestedLine: lineNum,
-      chosenMapping: chosen,
-      lineToBlockMap: cloneForDebug(lineToBlockMap)
-    });
     if (chosen) highlightBlock(chosen.blockId);
   }
 
@@ -1403,11 +1320,6 @@
   function syncFromCode(code) {
     blocks = parseCodeToBlocks(code);
     fullRender();
-    debugLog('syncFromCode', {
-      blockCount: blocks.length,
-      blocksJson: cloneForDebug(blocks),
-      lineToBlockMap: cloneForDebug(lineToBlockMap)
-    });
   }
   function getLineMap() { return lineToBlockMap; }
 

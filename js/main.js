@@ -17,7 +17,7 @@
   const diagramContainer = document.getElementById('diagram-container');
   const consoleEl = document.getElementById('console');
   const errorsEl = document.getElementById('errors');
-  const debugEl = document.getElementById('debug-console');
+  
   
   // ====== Poblar el select con los ejemplos ======
   exampleSelect.innerHTML = ''; // limpiar por si acaso
@@ -42,28 +42,11 @@
     exampleSelect.value = exampleKeys[0];
   }
 
-  function debugLog(scope, data) {
-    const payload = data === undefined ? '' : data;
-    try { console.debug('[DEBUG][' + scope + ']', payload); } catch (_) {}
-    if (!debugEl) return;
-    const div = document.createElement('div');
-    div.className = 'debug-entry';
-    const ts = new Date().toLocaleTimeString();
-    let body;
-    try { body = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2); }
-    catch (_) { body = String(payload); }
-    div.innerHTML = '<strong>[' + ts + '] ' + scope + '</strong>\\n' + escapeHtml(body);
-    debugEl.appendChild(div);
-    debugEl.scrollTop = debugEl.scrollHeight;
-  }
-
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, ch => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[ch]));
   }
-
-  window.__debugLog = debugLog;
 
   // === Flag to prevent sync loops ===
   let syncingFromCode = false;
@@ -94,10 +77,6 @@
 
   // === Setup execution highlighting callback ===
   window.__blockHighlightByLine = function (lineNum) {
-    debugLog('step.highlight.request', {
-      line: lineNum,
-      lineToBlockMap: BlockEditor.getLineMap ? BlockEditor.getLineMap() : []
-    });
     BlockEditor.highlightLine(lineNum);
   };
 
@@ -195,7 +174,6 @@
   function writelnOut(text, cls) { writeOut(text + '\n', cls); }
   function clearConsole() { consoleEl.innerHTML = ''; }
   function clearErrors() { errorsEl.innerHTML = ''; }
-  function clearDebug() { if (debugEl) debugEl.innerHTML = ''; }
 
   function showError(err) {
     const div = document.createElement('div');
@@ -379,12 +357,7 @@
     const src = editor.textarea.value;
     const stepMode = document.getElementById('step-mode').checked;
     const stepDelay = stepMode ? 500 : 0; // 500ms for step-by-step, 0 for normal
-    debugLog('run.start', {
-      stepMode,
-      sourceLength: src.length,
-      sourceLines: src.split('\n').length
-    });
-
+	
     const { tokens, errors: lexErrors } = Lexer.tokenize(src);
     if (lexErrors.length) {
       lexErrors.forEach(showError);
@@ -423,13 +396,9 @@
       syncingFromCode = true;
       try {
         BlockEditor.syncFromCode(src);
-        debugLog('run.syncBlocks', {
-          blocksJson: BlockEditor.getBlocks ? BlockEditor.getBlocks() : [],
-          lineToBlockMap: BlockEditor.getLineMap ? BlockEditor.getLineMap() : []
-        });
       } catch (e) {
         console.warn('Error al sincronizar bloques:', e);
-        debugLog('run.syncBlocks.error', { message: e.message });
+        //debugLog('run.syncBlocks.error', { message: e.message });
       }
       syncingFromCode = false;
     }
@@ -473,18 +442,6 @@
   // === Event listeners ===
   btnRun.addEventListener('click', runProgram);
   btnStop.addEventListener('click', stopProgram);
-
-  btnClear.addEventListener('click', () => {
-    editor.textarea.value = '';
-    editor.update();
-    clearConsole();
-    clearErrors();
-    clearDebug();
-    diagramContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#b0a070;font-size:13px;font-style:italic;">Ejecuta el codigo para ver el diagrama</div>';
-    diagramData = null;
-    BlockEditor.setBlocks([]);
-    BlockEditor.clearHighlight();
-  });
 
   btnExample.addEventListener('click', () => {
     const key = exampleSelect.value;
