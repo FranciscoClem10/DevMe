@@ -1,0 +1,674 @@
+/* ============================================================
+ * main.js — Conecta la UI con el compilador, bloques y diagrama.
+ * ============================================================ */
+(function () {
+  'use strict';
+
+  const editor = Editor.init();
+  const btnRun = document.getElementById('btn-run');
+  const btnStop = document.getElementById('btn-stop');
+  const btnClear = document.getElementById('btn-clear');
+  const btnExample = document.getElementById('btn-example');
+  const exampleSelect = document.getElementById('example-select');
+  const inputLine = document.getElementById('input-line');
+  const stdinInput = document.getElementById('stdin');
+  const btnSend = document.getElementById('btn-send');
+  const promptEl = document.getElementById('input-prompt');
+  const diagramContainer = document.getElementById('diagram-container');
+  const consoleEl = document.getElementById('console');
+  const errorsEl = document.getElementById('errors');
+  const debugEl = document.getElementById('debug-console');
+  
+  // ====== Poblar el select con los ejemplos ======
+  exampleSelect.innerHTML = ''; // limpiar por si acaso
+  const exampleKeys = Object.keys(EXAMPLES);
+  exampleKeys.sort(); // opcional, orden alfabético
+  for (const key of exampleKeys) {
+    const option = document.createElement('option');
+    option.value = key;
+    // Crear una etiqueta legible
+    let label = key
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .replace(/^\w/, c => c.toUpperCase());
+    option.textContent = label;
+    exampleSelect.appendChild(option);
+  }
+  // Seleccionar 'hola' por defecto si existe, o el primero
+  if (EXAMPLES.hola) {
+    exampleSelect.value = 'hola';
+  } else if (exampleKeys.length > 0) {
+    exampleSelect.value = exampleKeys[0];
+  }
+
+  function debugLog(scope, data) {
+    const payload = data === undefined ? '' : data;
+    try { console.debug('[DEBUG][' + scope + ']', payload); } catch (_) {}
+    if (!debugEl) return;
+    const div = document.createElement('div');
+    div.className = 'debug-entry';
+    const ts = new Date().toLocaleTimeString();
+    let body;
+    try { body = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2); }
+    catch (_) { body = String(payload); }
+    div.innerHTML = '<strong>[' + ts + '] ' + scope + '</strong>\\n' + escapeHtml(body);
+    debugEl.appendChild(div);
+    debugEl.scrollTop = debugEl.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  }
+
+  window.__debugLog = debugLog;
+
+  // === Flag to prevent sync loops ===
+  let syncingFromCode = false;
+  let syncingFromBlocks = false;
+
+  // === Init Block Editor ===
+  (async () => {
+    await BlockEditor.init();
+    
+    BlockEditor.setOnChange(() => {
+      if (syncingFromCode) return; // don't sync back if we just synced from code
+      syncingFromBlocks = true;
+      const blockCode = BlockEditor.getCode();
+      if (blockCode.trim()) {
+        editor.textarea.value = blockCode;
+      }
+      editor.update();
+      syncingFromBlocks = false;
+    });
+
+    // Load default example after BlockEditor is ready
+    syncingFromCode = true;
+    editor.textarea.value = EXAMPLES.hola;
+    editor.update();
+    try { BlockEditor.syncFromCode(EXAMPLES.hola); } catch (e) {}
+    syncingFromCode = false;
+  })();
+
+  // === Setup execution highlighting callback ===
+  window.__blockHighlightByLine = function (lineNum) {
+    debugLog('step.highlight.request', {
+      line: lineNum,
+      lineToBlockMap: BlockEditor.getLineMap ? BlockEditor.getLineMap() : []
+    });
+    BlockEditor.highlightLine(lineNum);
+  };
+
+  // === Main Tabs ===
+  const mainTabs = document.querySelectorAll('.main-tab');
+  const mainPanels = document.querySelectorAll('.main-tab-panel');
+
+  mainTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      mainTabs.forEach(t => t.classList.remove('active'));
+      mainPanels.forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const panelName = tab.dataset.mainTab;
+      document.querySelector('.main-tab-panel[data-panel="' + panelName + '"]').classList.add('active');
+    });
+  });
+
+  function switchToMainTab(name) {
+    mainTabs.forEach(t => t.classList.remove('active'));
+    mainPanels.forEach(p => p.classList.remove('active'));
+    const tab = document.querySelector('.main-tab[data-main-tab="' + name + '"]');
+    if (tab) tab.classList.add('active');
+    const panel = document.querySelector('.main-tab-panel[data-panel="' + name + '"]');
+    if (panel) panel.classList.add('active');
+  }
+
+  // === Console sub-tabs ===
+  const consoleTabs = document.querySelectorAll('.tab');
+  consoleTabs.forEach(t => {
+    t.addEventListener('click', () => {
+      consoleTabs.forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+    });
+  });
+
+  function switchToConsoleTab(tabName) {
+    consoleTabs.forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+    const tab = document.querySelector('.tab[data-tab="' + tabName + '"]');
+    if (tab) tab.classList.add('active');
+    const content = document.getElementById('tab-' + tabName);
+    if (content) content.classList.add('active');
+  }
+
+  // === Console resize ===
+  const consolePanel = document.getElementById('console-panel');
+  const divider = document.getElementById('split-divider');
+  let isResizing = false, startY = 0, startHeight = 0;
+
+  const savedHeight = localStorage.getItem('consoleHeight');
+  if (savedHeight) {
+    const h = parseInt(savedHeight, 10);
+    if (!isNaN(h) && h >= 100) consolePanel.style.height = h + 'px';
+  }
+
+  divider.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    startY = e.clientY;
+    startHeight = consolePanel.offsetHeight;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    divider.classList.add('active');
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const delta = startY - e.clientY;
+    let newHeight = startHeight + delta;
+    newHeight = Math.min(Math.max(newHeight, 100), window.innerHeight * 0.5);
+    consolePanel.style.height = newHeight + 'px';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      divider.classList.remove('active');
+      localStorage.setItem('consoleHeight', consolePanel.offsetHeight);
+    }
+  });
+
+  // === Console IO ===
+  function writeOut(text, cls) {
+    const span = document.createElement('span');
+    span.className = cls || 'out';
+    span.textContent = text;
+    consoleEl.appendChild(span);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+  function writelnOut(text, cls) { writeOut(text + '\n', cls); }
+  function clearConsole() { consoleEl.innerHTML = ''; }
+  function clearErrors() { errorsEl.innerHTML = ''; }
+  function clearDebug() { if (debugEl) debugEl.innerHTML = ''; }
+
+  function showError(err) {
+    const div = document.createElement('div');
+    div.className = 'err-line';
+    const loc = err.line ? ' (linea ' + err.line + (err.col ? ', col ' + err.col : '') + ')' : '';
+    div.innerHTML = '<span class="err-phase">[' + err.phase + ']</span> ' + err.message + loc;
+    errorsEl.appendChild(div);
+  }
+
+  function showOk(msg) {
+    const div = document.createElement('div');
+    div.className = 'err-line err-ok';
+    div.textContent = msg;
+    errorsEl.appendChild(div);
+  }
+
+  // === User Input ===
+  function waitForInput(prompt) {
+    return new Promise((resolve, reject) => {
+      const abortHandler = () => {
+        reject(new Error('Ejecucion cancelada'));
+        cleanup();
+      };
+      if (abortController) abortController.signal.addEventListener('abort', abortHandler);
+
+      inputLine.style.display = 'flex';
+      promptEl.textContent = prompt || 'Entrada:';
+      stdinInput.value = '';
+      stdinInput.focus();
+
+      const send = () => {
+        const val = stdinInput.value;
+        writelnOut('> ' + val, 'in');
+        inputLine.style.display = 'none';
+        cleanup();
+        resolve(val);
+      };
+      const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
+
+      const cleanup = () => {
+        btnSend.removeEventListener('click', send);
+        stdinInput.removeEventListener('keydown', onKey);
+        if (abortController) abortController.signal.removeEventListener('abort', abortHandler);
+      };
+
+      btnSend.addEventListener('click', send);
+      stdinInput.addEventListener('keydown', onKey);
+    });
+  }
+
+  const io = {
+    write: (t) => writeOut(t),
+    writeln: (t) => writelnOut(t),
+    read: () => waitForInput('Entrada:'),
+    waitKey: () => waitForInput('Presione Enter para continuar...'),
+    sleep: (sec) => {
+      return new Promise((resolve, reject) => {
+        if (abortController && abortController.signal.aborted) { reject(new Error('Ejecucion cancelada')); return; }
+        let timer = setTimeout(() => resolve(), sec * 1000);
+        const abortHandler = () => { clearTimeout(timer); reject(new Error('Ejecucion cancelada')); };
+        if (abortController) abortController.signal.addEventListener('abort', abortHandler);
+        const origResolve = resolve, origReject = reject;
+        resolve = (val) => { if (abortController) abortController.signal.removeEventListener('abort', abortHandler); origResolve(val); };
+        reject = (err) => { if (abortController) abortController.signal.removeEventListener('abort', abortHandler); origReject(err); };
+      });
+    },
+    clear: () => clearConsole()
+  };
+
+  let abortController = null;
+  let isRunning = false;
+  let executionTimeoutId = null;
+
+  // === Diagram ===
+  let diagramData = null;
+  let mermaidInitialized = false;
+
+  function initMermaid() {
+    if (typeof mermaid !== 'undefined' && !mermaidInitialized) {
+      mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e3a5f', lineColor: '#64748b', fontSize: '13px' } });
+      mermaidInitialized = true;
+    }
+  }
+
+  // Pan/Zoom
+  let currentZoom = 1, panX = 0, panY = 0;
+  let isDraggingDiagram = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
+
+  function setupPanZoom(container) {
+    let wrapper = container.querySelector('.diagram-wrapper');
+    if (!wrapper) {
+      wrapper = document.createElement('div');
+      wrapper.className = 'diagram-wrapper';
+      wrapper.style.transformOrigin = '0 0';
+      while (container.firstChild) wrapper.appendChild(container.firstChild);
+      container.appendChild(wrapper);
+    }
+
+    function updateTransform() {
+      wrapper.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + currentZoom + ')';
+    }
+
+    container.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      currentZoom = Math.min(Math.max(currentZoom + delta, 0.1), 5);
+      updateTransform();
+    }, { passive: false });
+
+    container.addEventListener('mousedown', function (e) {
+      isDraggingDiagram = true;
+      dragStartX = e.clientX; dragStartY = e.clientY;
+      panStartX = panX; panStartY = panY;
+      container.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!isDraggingDiagram) return;
+      panX = panStartX + (e.clientX - dragStartX);
+      panY = panStartY + (e.clientY - dragStartY);
+      updateTransform();
+    });
+
+    window.addEventListener('mouseup', function () {
+      if (isDraggingDiagram) { isDraggingDiagram = false; container.style.cursor = 'grab'; }
+    });
+
+    container.style.cursor = 'grab';
+    updateTransform();
+    container._updateTransform = updateTransform;
+    container._setupDone = true;
+  }
+
+  async function renderMermaid(mermaidCode) {
+    if (!mermaidCode) return;
+    initMermaid();
+    const container = diagramContainer;
+    let wrapper = container.querySelector('.diagram-wrapper');
+    if (wrapper) { while (wrapper.firstChild) wrapper.removeChild(wrapper.firstChild); }
+    else { container.innerHTML = ''; }
+
+    try {
+      const { svg } = await mermaid.render('mermaid-diagram', mermaidCode);
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'diagram-wrapper';
+        wrapper.style.transformOrigin = '0 0';
+        container.appendChild(wrapper);
+      }
+      wrapper.innerHTML = svg;
+      if (!container._setupDone) setupPanZoom(container);
+      else if (container._updateTransform) container._updateTransform();
+    } catch (e) {
+      console.error('Error al renderizar diagrama:', e);
+      container.innerHTML = '<div style="padding:20px;color:#b31d28;">Error al generar el diagrama. Verifica que el codigo sea correcto.</div>';
+    }
+  }
+
+  function downloadSVG() {
+    const svg = diagramContainer.querySelector('svg');
+    if (!svg) { alert('No hay diagrama. Ejecuta el codigo primero.'); return; }
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const source = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'diagrama.svg';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeURL(url);
+  }
+
+  // === Main execution ===
+  async function runProgram() {
+    if (isRunning) return;
+    clearConsole();
+    clearErrors();
+    switchToConsoleTab('console');
+
+    const src = editor.textarea.value;
+    const stepMode = document.getElementById('step-mode').checked;
+    const stepDelay = stepMode ? 500 : 0; // 500ms for step-by-step, 0 for normal
+    debugLog('run.start', {
+      stepMode,
+      sourceLength: src.length,
+      sourceLines: src.split('\n').length
+    });
+
+    const { tokens, errors: lexErrors } = Lexer.tokenize(src);
+    if (lexErrors.length) {
+      lexErrors.forEach(showError);
+      switchToConsoleTab('errors');
+      return;
+    }
+
+    const { ast, errors: parseErrors } = Parser.parse(tokens);
+    if (parseErrors.length) {
+      parseErrors.forEach(showError);
+      switchToConsoleTab('errors');
+      return;
+    }
+
+    const { errors: semErrors } = Semantic.analyze(ast);
+    if (semErrors.length) {
+      semErrors.forEach(showError);
+      switchToConsoleTab('errors');
+      return;
+    }
+
+    showOk('Analisis lexico, sintactico y semantico correcto. Ejecutando...');
+
+    // Generate and render diagram
+    try {
+      const mermaidCode = DiagramGenerator.generateDiagram(ast);
+      diagramData = mermaidCode;
+      await renderMermaid(mermaidCode);
+    } catch (e) {
+      console.warn('Error al generar diagrama:', e);
+    }
+
+    // In fast execution, avoid block sync and tab switching so the program runs
+    // as quickly as possible. Sync only when step-by-step highlighting needs it.
+    if (stepMode && BlockEditor.isReady()) {
+      syncingFromCode = true;
+      try {
+        BlockEditor.syncFromCode(src);
+        debugLog('run.syncBlocks', {
+          blocksJson: BlockEditor.getBlocks ? BlockEditor.getBlocks() : [],
+          lineToBlockMap: BlockEditor.getLineMap ? BlockEditor.getLineMap() : []
+        });
+      } catch (e) {
+        console.warn('Error al sincronizar bloques:', e);
+        debugLog('run.syncBlocks.error', { message: e.message });
+      }
+      syncingFromCode = false;
+    }
+
+    if (stepMode) {
+      switchToMainTab('blocks');
+    }
+
+    isRunning = true;
+    btnRun.disabled = true;
+    btnStop.style.display = 'inline-flex';
+    abortController = new AbortController();
+
+    executionTimeoutId = setTimeout(() => {
+      if (isRunning) writelnOut('La ejecucion esta tomando mas de 3 segundos. Use "Detener" si es necesario.', 'info');
+    }, 3000);
+
+    try {
+      writelnOut('--- Inicio de ejecucion ---', 'info');
+      await Interpreter.run(ast, io, abortController.signal, { stepDelay, stepHighlight: stepMode });
+      writelnOut('--- Fin de ejecucion ---', 'info');
+    } catch (err) {
+      if (err.message === 'Ejecucion cancelada') writelnOut('--- Ejecucion cancelada ---', 'info');
+      else {
+        showError({ phase: err.phase || 'Ejecucion', message: err.message, line: err.line || 0 });
+        switchToConsoleTab('errors');
+      }
+    } finally {
+      clearTimeout(executionTimeoutId);
+      isRunning = false;
+      btnRun.disabled = false;
+      btnStop.style.display = 'none';
+      abortController = null;
+      // Clear execution highlight
+      BlockEditor.clearHighlight();
+    }
+  }
+
+  function stopProgram() { if (abortController) abortController.abort(); }
+
+  // === Event listeners ===
+  btnRun.addEventListener('click', runProgram);
+  btnStop.addEventListener('click', stopProgram);
+
+  btnClear.addEventListener('click', () => {
+    editor.textarea.value = '';
+    editor.update();
+    clearConsole();
+    clearErrors();
+    clearDebug();
+    diagramContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#b0a070;font-size:13px;font-style:italic;">Ejecuta el codigo para ver el diagrama</div>';
+    diagramData = null;
+    BlockEditor.setBlocks([]);
+    BlockEditor.clearHighlight();
+  });
+
+  btnExample.addEventListener('click', () => {
+    const key = exampleSelect.value;
+    if (EXAMPLES[key] && BlockEditor.isReady()) {
+      syncingFromCode = true;
+      editor.textarea.value = EXAMPLES[key];
+      editor.update();
+      try { BlockEditor.syncFromCode(EXAMPLES[key]); } catch (e) {}
+      syncingFromCode = false;
+    }
+  });
+
+  document.getElementById('zoom-in').addEventListener('click', () => {
+    currentZoom = Math.min(currentZoom + 0.2, 5);
+    if (diagramContainer._updateTransform) diagramContainer._updateTransform();
+  });
+  document.getElementById('zoom-out').addEventListener('click', () => {
+    currentZoom = Math.max(currentZoom - 0.2, 0.1);
+    if (diagramContainer._updateTransform) diagramContainer._updateTransform();
+  });
+  document.getElementById('zoom-reset').addEventListener('click', () => {
+    currentZoom = 1; panX = 0; panY = 0;
+    if (diagramContainer._updateTransform) diagramContainer._updateTransform();
+  });
+  document.getElementById('btn-download-svg').addEventListener('click', downloadSVG);
+
+  // Sync code editor changes to blocks (debounced) — only if not syncing from blocks
+  let syncTimeout = null;
+  editor.textarea.addEventListener('input', () => {
+    if (syncingFromBlocks) return;
+    if (syncTimeout) clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => {
+      if (!BlockEditor.isReady()) return;
+      syncingFromCode = true;
+      try { BlockEditor.syncFromCode(editor.textarea.value); } catch (e) {}
+      syncingFromCode = false;
+    }, 1000);
+  });
+	// ============================================================
+// Zoom para el editor de código y el editor de bloques
+// ============================================================
+
+let codeZoom = 1;
+let blockZoom = 1;
+const CODE_BASE_FONT_SIZE = 14;
+
+// Aplicar zoom al editor de código (cambia tamaño de fuente)
+function applyCodeZoom() {
+    const editorEl = document.getElementById('editor');
+    const highlightEl = document.getElementById('editor-highlight');
+    const lineNums = document.getElementById('line-numbers');
+    if (!editorEl || !highlightEl || !lineNums) return;
+    
+    const size = CODE_BASE_FONT_SIZE * codeZoom;
+    const lineHeight = size * 1.6; // mantiene proporción
+    
+    editorEl.style.fontSize = size + 'px';
+    editorEl.style.lineHeight = lineHeight + 'px';
+    highlightEl.style.fontSize = size + 'px';
+    highlightEl.style.lineHeight = lineHeight + 'px';
+    lineNums.style.fontSize = size + 'px';
+    lineNums.style.lineHeight = lineHeight + 'px';
+    
+    // Forzar actualización del editor (resincroniza scroll y resaltado)
+    if (window.Editor && window.Editor.update) {
+        window.Editor.update();
+    } else {
+        // Si no existe el método update, disparar evento input
+        editorEl.dispatchEvent(new Event('input'));
+    }
+}
+
+// Aplicar zoom al editor de bloques (escala el workspace)
+function applyBlockZoom() {
+    const workspace = document.getElementById('block-workspace');
+    if (!workspace) return;
+    
+    // Buscar o crear el wrapper interno para escalar
+    let wrapper = workspace.querySelector('.block-zoom-wrapper');
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'block-zoom-wrapper';
+        wrapper.style.transformOrigin = 'top left';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.width = 'auto';
+        wrapper.style.height = 'auto';
+        // Mover todos los hijos actuales dentro del wrapper
+        while (workspace.firstChild) {
+            wrapper.appendChild(workspace.firstChild);
+        }
+        workspace.appendChild(wrapper);
+    }
+    wrapper.style.transform = 'scale(' + blockZoom + ')';
+}
+
+// Funciones para cambiar el zoom
+function changeCodeZoom(delta) {
+    codeZoom = Math.min(Math.max(codeZoom + delta, 0.5), 3);
+    applyCodeZoom();
+}
+
+function changeBlockZoom(delta) {
+    blockZoom = Math.min(Math.max(blockZoom + delta, 0.3), 3);
+    applyBlockZoom();
+}
+
+// --- Listeners de teclado (Ctrl + +, Ctrl + -, Ctrl + 0) ---
+document.addEventListener('keydown', function(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    const key = e.key;
+    
+    // Determinar qué panel está activo
+    const activePanel = document.querySelector('.main-tab-panel.active');
+    if (!activePanel) return;
+    const panelName = activePanel.dataset.panel;
+    
+    if (key === '=' || key === '+') {
+        e.preventDefault();
+        if (panelName === 'code') {
+            changeCodeZoom(0.1);
+        } else if (panelName === 'blocks') {
+            changeBlockZoom(0.1);
+        }
+    } else if (key === '-') {
+        e.preventDefault();
+        if (panelName === 'code') {
+            changeCodeZoom(-0.1);
+        } else if (panelName === 'blocks') {
+            changeBlockZoom(-0.1);
+        }
+    } else if (key === '0') {
+        e.preventDefault();
+        if (panelName === 'code') {
+            codeZoom = 1;
+            applyCodeZoom();
+        } else if (panelName === 'blocks') {
+            blockZoom = 1;
+            applyBlockZoom();
+        }
+    }
+});
+
+// --- Listener de rueda con Ctrl (zoom con scroll) ---
+document.addEventListener('wheel', function(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    
+    const target = e.target;
+    const codeEditor = document.getElementById('editor-container');
+    const blockWorkspace = document.getElementById('block-workspace');
+    
+    // Si el evento ocurre dentro del editor de código
+    if (codeEditor && codeEditor.contains(target)) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        changeCodeZoom(delta);
+    }
+    // Si ocurre dentro del editor de bloques
+    else if (blockWorkspace && blockWorkspace.contains(target)) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        changeBlockZoom(delta);
+    }
+    // Si no está en ninguno, no hacemos nada (dejamos que otros listeners, como el del diagrama, manejen el evento)
+}, { passive: false });
+
+// --- Inicializar zoom al cargar ---
+// Aplicar zoom inicial (se ejecuta después de que el DOM esté listo)
+setTimeout(function() {
+    applyCodeZoom();
+    applyBlockZoom();
+}, 100);
+
+// También reaplicar zoom cuando se cambie de pestaña (por si el wrapper no existe aún)
+document.querySelectorAll('.main-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        setTimeout(function() {
+            if (document.querySelector('.main-tab-panel[data-panel="blocks"]').classList.contains('active')) {
+                applyBlockZoom();
+            }
+            if (document.querySelector('.main-tab-panel[data-panel="code"]').classList.contains('active')) {
+                applyCodeZoom();
+            }
+        }, 50);
+    });
+});
+  btnStop.style.display = 'none';
+})();
