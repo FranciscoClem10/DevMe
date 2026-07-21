@@ -33,6 +33,12 @@
     }
   </script>
   <style>
+  /* === Panal con líneas más gruesas y transparentes === */
+  .bg-panal {
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="35" viewBox="0 0 60 35"><path d="M20 0 L40 0 L50 17.5 L40 35 L20 35 L10 17.5 Z M10 17.5 L0 17.5 M50 17.5 L60 17.5 M20 0 L10 17.5 M40 0 L50 17.5 M20 35 L10 17.5 M40 35 L50 17.5" fill="none" stroke="%23a7632b" stroke-opacity="0.05" stroke-width="4"/></svg>');
+      background-size: 60px 35px;
+      background-repeat: repeat;
+  }
     /* === Editor styles === */
     .editor-wrapper { display:flex; font-family:"Consolas","Monaco",monospace; font-size:14px; line-height:1.5; background:#fcfbf8; border-radius:0.5rem; overflow:hidden; height:100%; min-height:0; border:1px solid #e8e2ce; }
     .line-numbers { padding:8px 8px 8px 12px; background:#f5f3ee; color:#9c8749; text-align:right; user-select:none; border-right:1px solid #e8e2ce; min-width:40px; overflow:auto; white-space:pre; font-family:inherit; font-size:inherit; line-height:inherit; scrollbar-width:none; }
@@ -42,7 +48,7 @@
     .editor-highlight { position:absolute; inset:0; color:#1c180d; pointer-events:none; overflow:hidden; background:transparent; }
     #editor { position:absolute; inset:0; background:transparent; color:transparent; caret-color:#1c180d; resize:none; outline:none; width:100%; height:100%; overflow:auto; }
     .tok-kw{color:#1200ff;font-weight:bold} .tok-type{color:#e404ff} .tok-str{color:#22a324} .tok-num{color:#ff0000} .tok-cmt{color:#048b86;font-style:italic} .tok-op{color:#e6b01d} .tok-bool{color:#005cc5} .tok-name{color:#6f42c1} .tok-var{color:#e36209}
-    .console,.errors{padding:10px;overflow:auto;font-family:"Consolas","Monaco",monospace;font-size:13px;white-space:pre-wrap;word-wrap:break-word;background:#fcfbf8;color:#1c180d;height:100%}
+    .console,.errors{padding:10px;overflow:auto;font-family:"Consolas","Monaco",monospace;font-size:13px;white-space:pre-wrap;word-wrap:break-word;color:#1c180d;height:100%}
     .errors{color:#b31d28} .errors .err-line{padding:3px 6px;border-left:3px solid #b31d28;margin-bottom:4px;background:rgba(179,29,40,0.08)} .errors .err-phase{font-weight:bold;color:#d73a49} .errors .err-ok{color:#22863a;border-left-color:#22863a;background:rgba(34,134,58,0.08)}
     .console .out{color:#1c180d} .console .in{color:#005cc5} .console .info{color:#9c8749;font-style:italic}
     .debug-console{font-size:12px;background:#19150a;color:#f8e7a5}
@@ -54,7 +60,7 @@
     .input-line button{padding:5px 14px;background:#f4c025;color:#1c180d;border:none;border-radius:3px;cursor:pointer;font-weight:500;white-space:nowrap}
     #input-prompt{color:#005cc5;font-size:13px;font-weight:500;white-space:nowrap}
     .panel-container{display:flex;flex-direction:column;height:100%;min-height:0}
-    .panel-container .tab-content{flex:1;display:none;overflow:hidden;background:#fcfbf8}
+    .panel-container .tab-content{flex:1;display:none;overflow:hidden;}
     .panel-container .tab-content.active{display:flex;flex-direction:column}
     .tabs{display:flex;background:#f5f3ee;border-bottom:1px solid #e8e2ce;flex-shrink:0}
     .tab{padding:8px 16px;background:transparent;border:none;color:#9c8749;cursor:pointer;font-size:13px;border-bottom:2px solid transparent}
@@ -266,7 +272,7 @@
             <button id="btn-download-svg" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Descargar SVG"><span class="material-symbols-outlined" style="font-size:16px">download</span></button>
           </div>
         </div>
-        <div id="diagram-container" style="flex:1; overflow:hidden; position:relative; background:#fcfbf8;">
+        <div id="diagram-container" style="flex:1; overflow:hidden; position:relative;">
           <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#b0a070; font-size:13px; font-style:italic;">
             Ejecuta el codigo para ver el diagrama
           </div>
@@ -284,7 +290,7 @@
           <button class="tab" data-tab="debug">Bug</button>
         </div>
         <div id="tab-console" class="tab-content active">
-          <div id="console" class="console"></div>
+          <div id="console" class="console bg-panal"></div>
           <div id="input-line" class="input-line" style="display:none;">
             <span id="input-prompt">Entrada:</span>
             <input type="text" id="stdin" autocomplete="off" />
@@ -292,9 +298,9 @@
           </div>
         </div>
         <div id="tab-errors" class="tab-content">
-          <div id="errors" class="errors"></div>
+          <div id="errors" class="errors bg-panal"></div>
         </div>
-        <div id="tab-debug" class="tab-content">
+        <div id="tab-debug" class="tab-content bg-panal">
 		  <img src="imgs/Proximamente.png" alt="En progreso" style="width:100%; height:100%; object-fit:contain;" />
 		</div>
       </div>
