@@ -135,6 +135,32 @@
     .block-else-sep.block-cat-condition { background:rgba(185,119,14,.06); color:#b9770e; }
     .block-else-sep.block-cat-structure { background:rgba(146,64,14,.06); color:#92400e; }
 
+    /* === Word highlight (Feature 1) === */
+    .word-highlight { background:rgba(244,192,37,0.3); border-radius:2px; }
+    .word-highlight-current { background:rgba(244,192,37,0.6); border-radius:2px; }
+
+    /* === Search bar (Feature 2) === */
+    .search-bar { position:absolute; top:8px; right:8px; background:#fff; border:1px solid #e8e2ce; border-radius:6px; padding:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:100; display:none; gap:6px; align-items:center; font-family:inherit; font-size:13px; }
+    .search-bar.active { display:flex; }
+    .search-bar input { padding:4px 8px; border:1px solid #d0c8b4; border-radius:4px; font-family:inherit; font-size:13px; min-width:200px; outline:none; }
+    .search-bar input:focus { border-color:#f4c025; box-shadow:0 0 0 2px rgba(244,192,37,0.2); }
+    .search-bar button { padding:4px 10px; background:#f4c025; color:#1c180d; border:none; border-radius:4px; cursor:pointer; font-weight:500; font-size:12px; }
+    .search-bar button:hover { background:#e5b321; }
+    .search-bar .search-info { color:#9c8749; font-size:11px; min-width:60px; text-align:center; }
+
+    /* === Autocomplete (Feature 5) === */
+    .autocomplete-dropdown { position:absolute; background:#fff; border:1px solid #e8e2ce; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); max-height:200px; overflow-y:auto; z-index:200; display:none; font-family:"Consolas","Monaco",monospace; font-size:13px; }
+    .autocomplete-dropdown.active { display:block; }
+    .autocomplete-item { padding:6px 12px; cursor:pointer; border-bottom:1px solid #f5f3ee; display:flex; align-items:center; gap:8px; }
+    .autocomplete-item:hover { background:#fef9e7; }
+    .autocomplete-item.selected { background:#f4c025; color:#1c180d; }
+    .autocomplete-item .ac-icon { font-size:14px; opacity:0.6; }
+    .autocomplete-item .ac-label { flex:1; }
+    .autocomplete-item .ac-type { font-size:10px; color:#9c8749; }
+
+    /* === Line counter (Feature 3) === */
+    .line-counter { margin-left:auto; padding:0 12px; color:#9c8749; font-size:11px; font-weight:500; display:flex; align-items:center; }
+
     /* === Sidebar block palette === */
     .block-palette-item { display:flex; align-items:center; gap:6px; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:500; cursor:grab; user-select:none; margin-bottom:3px; border:1px solid rgba(0,0,0,.08); transition:all .12s; }
     .block-palette-item:hover { transform:translateX(2px); box-shadow:0 1px 4px rgba(0,0,0,.1); }
@@ -240,6 +266,16 @@
             <div id="editor-container" class="editor-container">
               <pre id="editor-highlight" class="editor-highlight" aria-hidden="true"></pre>
               <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Escribe tu pseudocodigo aqui..."></textarea>
+              <!-- Search bar (Feature 2) -->
+              <div id="search-bar" class="search-bar">
+                <input type="text" id="search-input" placeholder="Buscar..." autocomplete="off" />
+                <span class="search-info" id="search-info"></span>
+                <button id="search-prev" title="Anterior (Shift+Enter)">&#9650;</button>
+                <button id="search-next" title="Siguiente (Enter)">&#9660;</button>
+                <button id="search-close" title="Cerrar (Esc)">&#10005;</button>
+              </div>
+              <!-- Autocomplete dropdown (Feature 5) -->
+              <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
             </div>
           </div>
         </div>
@@ -288,6 +324,7 @@
           <button class="tab active" data-tab="console">Consola</button>
           <button class="tab" data-tab="errors">Errores</button>
           <button class="tab" data-tab="debug">Bug</button>
+          <span class="line-counter" id="line-counter">Ln 1, Col 1</span>
         </div>
         <div id="tab-console" class="tab-content active">
           <div id="console" class="console bg-panal"></div>

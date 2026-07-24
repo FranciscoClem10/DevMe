@@ -956,6 +956,7 @@
 
   /* ───── Code editor drop ───── */
   let savedCursorPos = null;
+  let blockDropIndicator = null;
 
   function setupCodeDrop() {
     const ed = document.getElementById('editor');
@@ -972,19 +973,53 @@
     });
     
     ed.addEventListener('dragover', e => {
-      e.preventDefault(); 
-      ed.style.background = '#fef9e7';
+      // Only handle block palette drops
+      if (!dragData || dragData.source !== 'palette') return;
+      
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      
+      // Show translucent drop indicator instead of opaque background
+      const rect = ed.getBoundingClientRect();
+      const style = getComputedStyle(ed);
+      const lineHeight = parseFloat(style.lineHeight);
+      const y = e.clientY - rect.top - parseFloat(style.paddingTop) + ed.scrollTop;
+      const lineIdx = Math.floor(y / lineHeight);
+      
+      // Remove old indicator
+      if (blockDropIndicator) {
+        blockDropIndicator.remove();
+      }
+      
+      // Create new indicator - translucent line
+      blockDropIndicator = document.createElement('div');
+      const topPos = lineIdx * lineHeight;
+      blockDropIndicator.style.cssText = `position:absolute;top:${topPos}px;left:0;right:0;height:2px;background:rgba(244,192,37,0.6);pointer-events:none;z-index:100;`;
+      document.getElementById('editor-container').appendChild(blockDropIndicator);
     });
     
     ed.addEventListener('dragleave', () => { 
-      ed.style.background = 'transparent';
+      // Remove indicator
+      if (blockDropIndicator) {
+        blockDropIndicator.remove();
+        blockDropIndicator = null;
+      }
     });
     
     ed.addEventListener('drop', e => {
-      e.preventDefault(); 
-      ed.style.background = 'transparent';
+      // Only handle block palette drops
+      if (!dragData || dragData.source !== 'palette') return;
       
-      if (dragData?.source === 'palette') {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent other drop handlers from running
+      
+      // Remove indicator
+      if (blockDropIndicator) {
+        blockDropIndicator.remove();
+        blockDropIndicator = null;
+      }
+      
+      if (dragData.source === 'palette') {
         const tmp = createBlock(dragData.type);
         if (tmp) {
           const snippet = generateCode([tmp], '');
@@ -1322,11 +1357,16 @@
     fullRender();
   }
   function getLineMap() { return lineToBlockMap; }
+  
+  // Check if a block palette drag is in progress
+  function isPaletteDrag() {
+    return dragData && dragData.source === 'palette';
+  }
 
   global.BlockEditor = {
     init, getBlocks, setBlocks, getCode, syncFromCode,
     BLOCK_DEFS, createBlock, setOnChange, undo, redo, isReady,
-    highlightBlock, highlightLine, clearHighlight, getLineMap
+    highlightBlock, highlightLine, clearHighlight, getLineMap, isPaletteDrag
   };
 
   /* ───── Fallback definitions (if JSON fails to load) ───── */

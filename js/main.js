@@ -65,6 +65,11 @@
       }
       editor.update();
       syncingFromBlocks = false;
+      
+      // Feature 6: Save shared state when blocks change
+      if (typeof saveSharedState === 'function') {
+        saveSharedState();
+      }
     });
 
     // Load default example after BlockEditor is ready
@@ -123,7 +128,7 @@
     if (content) content.classList.add('active');
   }
 
-  // === Console resize ===
+  // === Console resize (Feature 3: More flexible) ===
   const consolePanel = document.getElementById('console-panel');
   const divider = document.getElementById('split-divider');
   let isResizing = false, startY = 0, startHeight = 0;
@@ -131,7 +136,7 @@
   const savedHeight = localStorage.getItem('consoleHeight');
   if (savedHeight) {
     const h = parseInt(savedHeight, 10);
-    if (!isNaN(h) && h >= 100) consolePanel.style.height = h + 'px';
+    if (!isNaN(h) && h >= 40) consolePanel.style.height = h + 'px';
   }
 
   divider.addEventListener('mousedown', (e) => {
@@ -148,7 +153,12 @@
     if (!isResizing) return;
     const delta = startY - e.clientY;
     let newHeight = startHeight + delta;
-    newHeight = Math.min(Math.max(newHeight, 100), window.innerHeight * 0.5);
+    // Feature 3: Allow much more flexible resizing
+    // Min: 40px (just tab bar visible)
+    // Max: window.innerHeight - 100px (almost full screen)
+    const minHeight = 40;
+    const maxHeight = window.innerHeight - 100;
+    newHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
     consolePanel.style.height = newHeight + 'px';
     e.preventDefault();
   });
@@ -480,6 +490,158 @@
       syncingFromCode = false;
     }, 1000);
   });
+
+  // ============================================================
+  // Feature 6: Shared Undo/Redo between Code and Block editors
+  // ============================================================
+  const sharedUndoStack = [];
+  const sharedRedoStack = [];
+  const MAX_SHARED_UNDO = 100;
+  let lastSavedState = null;
+  let sharedUndoEnabled = true;
+
+  function saveSharedState() {
+    if (!sharedUndoEnabled) return;
+    
+    const codeState = editor.textarea.value;
+    const blocksState = BlockEditor.isReady() ? JSON.stringify(BlockEditor.getBlocks()) : '[]';
+    const cursorPos = editor.textarea.selectionStart;
+    
+    const state = {
+      code: codeState,
+      blocks: blocksState,
+      cursor: cursorPos,
+      timestamp: Date.now()
+    };
+    
+    // Don't save if state hasn't changed
+    if (lastSavedState && lastSavedState.code === state.code && lastSavedState.blocks === state.blocks) {
+      return;
+    }
+    
+    sharedUndoStack.push(state);
+    if (sharedUndoStack.length > MAX_SHARED_UNDO) {
+      sharedUndoStack.shift();
+    }
+    sharedRedoStack.length = 0; // Clear redo stack on new change
+    lastSavedState = state;
+  }
+
+  function sharedUndo() {
+    if (sharedUndoStack.length === 0) return;
+    
+    // Save current state to redo stack
+    const currentState = {
+      code: editor.textarea.value,
+      blocks: BlockEditor.isReady() ? JSON.stringify(BlockEditor.getBlocks()) : '[]',
+      cursor: editor.textarea.selectionStart
+    };
+    sharedRedoStack.push(currentState);
+    
+    // Restore previous state
+    const prevState = sharedUndoStack.pop();
+    lastSavedState = prevState;
+    
+    // Apply state without triggering more undo saves
+    sharedUndoEnabled = false;
+    syncingFromCode = true;
+    
+    editor.textarea.value = prevState.code;
+    editor.textarea.selectionStart = editor.textarea.selectionEnd = prevState.cursor;
+    editor.update();
+    
+    if (BlockEditor.isReady()) {
+      try {
+        const blocks = JSON.parse(prevState.blocks);
+        BlockEditor.setBlocks(blocks);
+      } catch (e) {
+        console.warn('Error restoring blocks from undo:', e);
+      }
+    }
+    
+    syncingFromCode = false;
+    sharedUndoEnabled = true;
+  }
+
+  function sharedRedo() {
+    if (sharedRedoStack.length === 0) return;
+    
+    // Save current state to undo stack
+    const currentState = {
+      code: editor.textarea.value,
+      blocks: BlockEditor.isReady() ? JSON.stringify(BlockEditor.getBlocks()) : '[]',
+      cursor: editor.textarea.selectionStart
+    };
+    sharedUndoStack.push(currentState);
+    
+    // Restore next state from redo stack
+    const nextState = sharedRedoStack.pop();
+    lastSavedState = nextState;
+    
+    // Apply state
+    sharedUndoEnabled = false;
+    syncingFromCode = true;
+    
+    editor.textarea.value = nextState.code;
+    editor.textarea.selectionStart = editor.textarea.selectionEnd = nextState.cursor;
+    editor.update();
+    
+    if (BlockEditor.isReady()) {
+      try {
+        const blocks = JSON.parse(nextState.blocks);
+        BlockEditor.setBlocks(blocks);
+      } catch (e) {
+        console.warn('Error restoring blocks from redo:', e);
+      }
+    }
+    
+    syncingFromCode = false;
+    sharedUndoEnabled = true;
+  }
+
+  // Save state before changes (debounced)
+  let saveTimeout = null;
+  function scheduleSave() {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveSharedState, 300);
+  }
+
+  // Listen to code editor changes
+  editor.textarea.addEventListener('input', scheduleSave);
+  editor.textarea.addEventListener('keydown', (e) => {
+    // Save state before major operations
+    if (e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete' || 
+        ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'x'))) {
+      saveSharedState();
+    }
+  });
+
+  // Override Ctrl+Z and Ctrl+Y for shared undo/redo
+  document.addEventListener('keydown', (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    
+    // Only handle undo/redo when code editor is active
+    const activePanel = document.querySelector('.main-tab-panel.active');
+    if (!activePanel || activePanel.dataset.panel !== 'code') return;
+    
+    // Don't interfere if search bar is open
+    const searchBar = document.getElementById('search-bar');
+    if (searchBar && searchBar.classList.contains('active')) return;
+    
+    if (e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      sharedUndo();
+    } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      sharedRedo();
+    }
+  });
+
+  // Initial state save
+  setTimeout(() => {
+    saveSharedState();
+  }, 500);
+
 	// ============================================================
 // Zoom para el editor de código y el editor de bloques
 // ============================================================
