@@ -256,13 +256,13 @@
     "game_abrir": {
       "category": "game",
       "label": "Abrir Puerta",
-      "icon": "door_front",
+      "icon": "door_open",
       "fields": {}
     },
     "game_cerrar": {
       "category": "game",
       "label": "Cerrar Puerta",
-      "icon": "door_closed",
+      "icon": "door_front",
       "fields": {}
     },
     "game_usar": {
