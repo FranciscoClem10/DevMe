@@ -7,6 +7,8 @@
   const editor = Editor.init();
   const btnRun = document.getElementById('btn-run');
   const btnStop = document.getElementById('btn-stop');
+  const btnPause = document.getElementById('btn-pause');
+  const btnReset = document.getElementById('btn-reset');
   const btnClear = document.getElementById('btn-clear');
   const btnExample = document.getElementById('btn-example');
   const exampleSelect = document.getElementById('example-select');
@@ -51,6 +53,9 @@
   // === Flag to prevent sync loops ===
   let syncingFromCode = false;
   let syncingFromBlocks = false;
+  
+  // Layout state
+  let currentLayout = 'code';
 
   // === Init Block Editor ===
   (async () => {
@@ -72,12 +77,15 @@
       }
     });
 
-    // Load default example after BlockEditor is ready
-    syncingFromCode = true;
-    editor.textarea.value = EXAMPLES.hola;
-    editor.update();
-    try { BlockEditor.syncFromCode(EXAMPLES.hola); } catch (e) {}
-    syncingFromCode = false;
+    // Only load default example if the editor is still empty
+    // (game.js may have already loaded starter code for the current level)
+    if (!editor.textarea.value.trim()) {
+      syncingFromCode = true;
+      editor.textarea.value = EXAMPLES.hola;
+      editor.update();
+      try { BlockEditor.syncFromCode(EXAMPLES.hola); } catch (e) {}
+      syncingFromCode = false;
+    }
   })();
 
   // === Setup execution highlighting callback ===
@@ -87,25 +95,61 @@
 
   // === Main Tabs ===
   const mainTabs = document.querySelectorAll('.main-tab');
-  const mainPanels = document.querySelectorAll('.main-tab-panel');
+  const editorPanel = document.getElementById('editor-panel');
+  const gamePanel = document.getElementById('game-panel');
 
   mainTabs.forEach(tab => {
     tab.addEventListener('click', () => {
+      const tabName = tab.dataset.mainTab;
+      // If clicking game tab, switch to game layout
+      if (tabName === 'game') {
+        applyLayout('game');
+        return;
+      }
+      // If clicking code/blocks/diagram, show that panel in editor area
       mainTabs.forEach(t => t.classList.remove('active'));
-      mainPanels.forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
-      const panelName = tab.dataset.mainTab;
-      document.querySelector('.main-tab-panel[data-panel="' + panelName + '"]').classList.add('active');
+      
+      const allPanels = document.querySelectorAll('.main-tab-panel');
+      allPanels.forEach(p => {
+        p.style.display = 'none';
+        p.classList.remove('active');
+      });
+      
+      const panel = document.querySelector('.main-tab-panel[data-panel="' + tabName + '"]');
+      if (panel) {
+        panel.style.display = 'flex';
+        panel.classList.add('active');
+      }
+      
+      // Show editor panel, hide game panel (unless in split mode)
+      if (currentLayout !== 'split-code' && currentLayout !== 'split-blocks') {
+        editorPanel.style.display = 'flex';
+        gamePanel.style.display = 'none';
+        document.getElementById('split-divider-v').style.display = 'none';
+      }
+      
+      // Update layout buttons
+      if (tabName === 'code') {
+        document.querySelectorAll('.layout-btn').forEach(b => b.classList.toggle('active', b.dataset.layout === 'code'));
+        currentLayout = 'code';
+      } else if (tabName === 'blocks') {
+        // Keep current split or set to blocks only
+        if (currentLayout !== 'split-blocks') {
+          document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
+          currentLayout = 'blocks';
+        }
+      } else if (tabName === 'diagram') {
+        document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
+        currentLayout = 'diagram';
+      }
     });
   });
 
   function switchToMainTab(name) {
     mainTabs.forEach(t => t.classList.remove('active'));
-    mainPanels.forEach(p => p.classList.remove('active'));
     const tab = document.querySelector('.main-tab[data-main-tab="' + name + '"]');
-    if (tab) tab.classList.add('active');
-    const panel = document.querySelector('.main-tab-panel[data-panel="' + name + '"]');
-    if (panel) panel.classList.add('active');
+    if (tab) tab.click();
   }
 
   // === Console sub-tabs ===
@@ -421,7 +465,6 @@
     btnRun.disabled = true;
     btnStop.style.display = 'inline-flex';
     abortController = new AbortController();
-
     executionTimeoutId = setTimeout(() => {
       if (isRunning) writelnOut('La ejecucion esta tomando mas de 3 segundos. Use "Detener" si es necesario.', 'info');
     }, 3000);
@@ -450,8 +493,25 @@
   function stopProgram() { if (abortController) abortController.abort(); }
 
   // === Event listeners ===
-  btnRun.addEventListener('click', runProgram);
-  btnStop.addEventListener('click', stopProgram);
+  btnRun.addEventListener('click', () => {
+    // If in game layout or split mode, run the game
+    if (currentLayout === 'game' || currentLayout === 'split-code' || currentLayout === 'split-blocks') {
+      if (typeof window.runGameProgram === 'function') window.runGameProgram();
+    } else {
+      runProgram();
+    }
+  });
+  btnStop.addEventListener('click', () => {
+    stopProgram();
+    if (typeof window.stopGameProgram === 'function') window.stopGameProgram();
+  });
+  btnReset.addEventListener('click', () => {
+    if (typeof window.resetGame === 'function') window.resetGame();
+  });
+  btnClear.addEventListener('click', () => {
+    clearConsole();
+    clearErrors();
+  });
 
   btnExample.addEventListener('click', () => {
     const key = exampleSelect.value;
@@ -789,122 +849,6 @@ document.querySelectorAll('.main-tab').forEach(tab => {
         }, 50);
     });
 });
-  btnStop.style.display = 'none';
-
-  // ============================================================
-  // Layout Manager: Split View simple
-  // ============================================================
-  let currentLayout = 'code';
-
-  function applyLayout(mode) {
-    currentLayout = mode;
-    const splitContainer = document.getElementById('split-view-container');
-    const editorPane = document.getElementById('split-editor-pane');
-    const gamePane = document.getElementById('split-game-pane');
-
-    // Actualizar botones
-    document.querySelectorAll('.layout-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.layout === mode);
-    });
-
-    // Ocultar split container por defecto
-    splitContainer.style.display = 'none';
-
-    // Restaurar paneles normales
-    const allPanels = document.querySelectorAll('.main-tab-panel');
-    allPanels.forEach(p => {
-      p.style.display = 'none';
-      p.classList.remove('active');
-    });
-
-    const sidebarCode = document.getElementById('sidebar-code');
-    const sidebarGame = document.getElementById('sidebar-game');
-
-    if (mode === 'code') {
-      // Solo editor de código
-      const panel = document.querySelector('.main-tab-panel[data-panel="code"]');
-      panel.style.display = 'flex';
-      panel.classList.add('active');
-      if (sidebarCode) sidebarCode.style.display = 'flex';
-      if (sidebarGame) sidebarGame.style.display = 'none';
-    } else if (mode === 'game') {
-      // Solo juego
-      const panel = document.querySelector('.main-tab-panel[data-panel="game"]');
-      panel.style.display = 'flex';
-      panel.classList.add('active');
-      if (sidebarCode) sidebarCode.style.display = 'none';
-      if (sidebarGame) sidebarGame.style.display = 'flex';
-      setTimeout(() => {
-        if (window.__renderer) {
-          window.__renderer.resize();
-          window.__renderer.render();
-        }
-      }, 50);
-    } else if (mode === 'split-code' || mode === 'split-blocks') {
-      // Split view: editor + juego lado a lado
-      splitContainer.style.display = 'flex';
-
-      // Configurar panel izquierdo (editor o bloques)
-      editorPane.innerHTML = '';
-      if (mode === 'split-code') {
-        // Editor de código
-        const codePanel = document.querySelector('.main-tab-panel[data-panel="code"]');
-        const clone = codePanel.cloneNode(true);
-        clone.style.display = 'flex';
-        clone.style.height = '100%';
-        editorPane.appendChild(clone);
-        // Sincronizar textarea con el original
-        const originalTextarea = document.getElementById('editor');
-        const cloneTextarea = clone.querySelector('#editor');
-        if (originalTextarea && cloneTextarea) {
-          cloneTextarea.value = originalTextarea.value;
-          cloneTextarea.addEventListener('input', () => {
-            originalTextarea.value = cloneTextarea.value;
-            if (window.Editor) window.Editor.update();
-          });
-          originalTextarea.addEventListener('input', () => {
-            cloneTextarea.value = originalTextarea.value;
-          });
-        }
-      } else {
-        // Editor de bloques
-        const blocksPanel = document.querySelector('.main-tab-panel[data-panel="blocks"]');
-        const clone = blocksPanel.cloneNode(true);
-        clone.style.display = 'flex';
-        clone.style.height = '100%';
-        editorPane.appendChild(clone);
-      }
-
-      // Configurar panel derecho (juego)
-      gamePane.innerHTML = '';
-      const gamePanel = document.querySelector('.main-tab-panel[data-panel="game"]');
-      const gameClone = gamePanel.cloneNode(true);
-      gameClone.style.display = 'flex';
-      gameClone.style.height = '100%';
-      gamePane.appendChild(gameClone);
-
-      // Mostrar ambos sidebars
-      if (sidebarCode) sidebarCode.style.display = 'flex';
-      if (sidebarGame) sidebarGame.style.display = 'flex';
-
-      // Redimensionar canvas del juego después de que se muestre
-      setTimeout(() => {
-        const canvas = gameClone.querySelector('#game-canvas');
-        if (canvas && window.__renderer) {
-          window.__renderer.resize();
-          window.__renderer.render();
-        }
-      }, 100);
-    }
-  }
-
-  // Event listeners para botones de layout
-  document.querySelectorAll('.layout-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      applyLayout(btn.dataset.layout);
-    });
-  });
-
   // ============================================================
   // Función global para cargar código desde el juego (starter de niveles)
   // ============================================================
@@ -918,5 +862,91 @@ document.querySelectorAll('.main-tab').forEach(tab => {
     }
     syncingFromCode = false;
   };
+
+  // ============================================================
+  // Layout Manager: Split View con canvas funcional
+  // ============================================================
+
+  function applyLayout(mode) {
+    currentLayout = mode;
+    const edPanel = document.getElementById('editor-panel');
+    const gmPanel = document.getElementById('game-panel');
+    const splitDiv = document.getElementById('split-divider-v');
+
+    // Actualizar botones de layout
+    document.querySelectorAll('.layout-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.layout === mode);
+    });
+
+    // Actualizar tabs
+    const allPanels = document.querySelectorAll('.main-tab-panel');
+    allPanels.forEach(p => {
+      p.style.display = 'none';
+      p.classList.remove('active');
+    });
+
+    // Actualizar tabs principales
+    const mTabs = document.querySelectorAll('.main-tab');
+    mTabs.forEach(t => t.classList.remove('active'));
+
+    if (mode === 'code') {
+      edPanel.style.display = 'flex';
+      edPanel.style.flex = '1';
+      gmPanel.style.display = 'none';
+      splitDiv.style.display = 'none';
+      const codePanel = document.querySelector('.main-tab-panel[data-panel="code"]');
+      codePanel.style.display = 'flex';
+      codePanel.classList.add('active');
+      const codeTab = document.querySelector('.main-tab[data-main-tab="code"]');
+      if (codeTab) codeTab.classList.add('active');
+    } else if (mode === 'game') {
+      edPanel.style.display = 'none';
+      gmPanel.style.display = 'flex';
+      gmPanel.style.flex = '1';
+      splitDiv.style.display = 'none';
+      const gameTab = document.querySelector('.main-tab[data-main-tab="game"]');
+      if (gameTab) gameTab.classList.add('active');
+    } else if (mode === 'split-code') {
+      edPanel.style.display = 'flex';
+      edPanel.style.flex = '1';
+      gmPanel.style.display = 'flex';
+      gmPanel.style.flex = '1';
+      splitDiv.style.display = 'block';
+      const codePanel = document.querySelector('.main-tab-panel[data-panel="code"]');
+      codePanel.style.display = 'flex';
+      codePanel.classList.add('active');
+      const codeTab = document.querySelector('.main-tab[data-main-tab="code"]');
+      if (codeTab) codeTab.classList.add('active');
+    } else if (mode === 'split-blocks') {
+      edPanel.style.display = 'flex';
+      edPanel.style.flex = '1';
+      gmPanel.style.display = 'flex';
+      gmPanel.style.flex = '1';
+      splitDiv.style.display = 'block';
+      const blocksPanel = document.querySelector('.main-tab-panel[data-panel="blocks"]');
+      blocksPanel.style.display = 'flex';
+      blocksPanel.classList.add('active');
+      const blocksTab = document.querySelector('.main-tab[data-main-tab="blocks"]');
+      if (blocksTab) blocksTab.classList.add('active');
+    }
+
+    // Redimensionar canvas del juego después de cambiar el layout
+    setTimeout(() => {
+      if (window.__renderer) {
+        window.__renderer.resize();
+        window.__renderer.render();
+      }
+    }, 60);
+  }
+
+  // Event listeners para botones de layout
+  document.querySelectorAll('.layout-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyLayout(btn.dataset.layout);
+    });
+  });
+
+  // Exponer applyLayout globalmente
+  window.__applyLayout = applyLayout;
 
 })();

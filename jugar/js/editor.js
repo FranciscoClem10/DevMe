@@ -164,6 +164,8 @@
           out += '<span class="tok-bool">' + escapeHtml(word) + '</span>';
         } else if (KW_SINGLE.includes(lower)) {
           out += '<span class="tok-kw">' + escapeHtml(word) + '</span>';
+        } else if (window.GAME_BUILTINS && window.GAME_BUILTINS.some(function(gb){ return gb.toLowerCase() === lower; })) {
+          out += '<span class="tok-game">' + escapeHtml(word) + '</span>';
         } else {
           if (namesSet && namesSet.has(lower)) {
             out += '<span class="tok-name">' + escapeHtml(word) + '</span>';
@@ -609,6 +611,131 @@
     let autocompleteItems = [];
     let autocompleteSelectedIndex = -1;
     let autocompleteVisible = false;
+
+    // ========== Auto-indentación inteligente (estilo VS Code) ==========
+    const INDENT_UNIT = '    ';
+
+    // Palabras que aumentan la indentación en la SIGUIENTE línea
+    const INCREASE_NEXT = /^(algoritmo|subproceso|funcion|si\s+.*\s+entonces|sino\s+si\s+.*\s+entonces|sino|mientras\s+.*\s+hacer|para\s+.*\s+hacer|repetir|segun\s+.*\s+hacer|caso\s+.+:|de\s+otro\s+modo\s*:)\s*$/i;
+    // Palabras que disminuyen la indentación de la línea actual
+    const DECREASE_CURRENT = /^(finsi|finsegun|finmientras|finpara|finsubproceso|finfuncion|finalgoritmo|sino|sino\s+si|de\s+otro\s+modo|caso\s+.+:|hasta\s+que)\s*$/i;
+
+    function getLineIndent(line) {
+      const m = line.match(/^(\s*)/);
+      return m ? m[1] : '';
+    }
+
+    function computeIndentForNewLine(prevLine, currentIndent) {
+      // Base: mantener la indentación de la línea anterior
+      let indent = currentIndent;
+      const trimmedPrev = prevLine.trim();
+      // Si la línea anterior aumenta indentación, añadir un nivel
+      if (INCREASE_NEXT.test(trimmedPrev)) {
+        indent = indent + INDENT_UNIT;
+      }
+      return indent;
+    }
+
+    function computeIndentForCurrentLine(lineText, prevLineIndent) {
+      const trimmed = lineText.trim();
+      let indent = prevLineIndent;
+      // Si la línea actual es una palabra de cierre, reducir un nivel
+      if (DECREASE_CURRENT.test(trimmed)) {
+        // Quitar un nivel de indentación
+        if (indent.length >= INDENT_UNIT.length) {
+          indent = indent.substring(INDENT_UNIT.length);
+        } else {
+          indent = '';
+        }
+      }
+      return indent;
+    }
+
+    // Calcular indentación basada en toda la estructura del código
+    function computeSmartIndent(lines, lineIdx) {
+      let depth = 0;
+      for (let i = 0; i < lineIdx; i++) {
+        const trimmed = lines[i].trim().toLowerCase();
+        if (INCREASE_NEXT.test(trimmed)) depth++;
+        // Las líneas de cierre no aumentan depth (ya se reducen al escribir)
+        if (DECREASE_CURRENT.test(trimmed)) depth = Math.max(0, depth - 1);
+      }
+      return INDENT_UNIT.repeat(depth);
+    }
+
+    textarea.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      if (autocompleteVisible) return;
+
+      e.preventDefault();
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const value = textarea.value;
+
+      // Si hay selección, reemplazarla primero
+      if (start !== end) {
+        textarea.value = value.substring(0, start) + value.substring(end);
+        textarea.selectionStart = textarea.selectionEnd = start;
+      }
+
+      // Encontrar la línea actual
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      const currentLine = value.substring(lineStart, start);
+      const currentIndent = getLineIndent(currentLine);
+      const cursorInLine = start - lineStart;
+      const textBeforeCursor = currentLine.substring(0, cursorInLine);
+      const textAfterCursor = currentLine.substring(cursorInLine);
+
+      // Todo el texto después del cursor en la línea actual
+      const remainingOnLine = textAfterCursor.trim();
+
+      // Calcular nueva indentación
+      let newIndent;
+      if (remainingOnLine.length > 0) {
+        // Si hay texto después del cursor, simplemente insertar newline + misma indentación
+        newIndent = currentIndent;
+      } else {
+        // Calcular indentación inteligente
+        const allLines = value.split('\n');
+        const currentLineIdx = value.substring(0, start).split('\n').length - 1;
+        newIndent = computeSmartIndent(allLines, currentLineIdx);
+
+        // Si la línea actual es una palabra de cierre, usar indentación reducida
+        const trimmedCurrent = textBeforeCursor.trim();
+        if (DECREASE_CURRENT.test(trimmedCurrent)) {
+          if (currentIndent.length >= INDENT_UNIT.length) {
+            newIndent = currentIndent.substring(INDENT_UNIT.length);
+          } else {
+            newIndent = '';
+          }
+        }
+        // Si la línea actual aumenta indentación pero no hay texto después, mantener la nueva indentación
+        else if (INCREASE_NEXT.test(trimmedCurrent)) {
+          newIndent = currentIndent + INDENT_UNIT;
+        }
+        // Si no hay texto antes del cursor (línea vacía), mantener indentación inteligente
+        else if (trimmedCurrent.length === 0) {
+          newIndent = computeSmartIndent(allLines, currentLineIdx);
+        }
+      }
+
+      // Insertar newline + indentación
+      const insertion = '\n' + newIndent;
+      textarea.value = value.substring(0, start) + insertion + value.substring(start);
+      textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+
+      update();
+      if (window.Editor && window.Editor.updateLineCounter) {
+        window.Editor.updateLineCounter();
+      }
+    });
+
+    // Re-indentar línea actual al escribir (ajustar indentación al detectar keywords)
+    textarea.addEventListener('keyup', function(e) {
+      if (e.key === 'Enter' || e.key === 'Tab') return;
+      // No re-indentar automáticamente al escribir (solo en Enter/Tab)
+      // para no interferir con la edición libre del usuario
+    });
 	
 	// ========== Indentación con Tab / Shift+Tab ==========
 textarea.addEventListener('keydown', function (e) {

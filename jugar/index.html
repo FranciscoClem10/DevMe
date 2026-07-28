@@ -47,7 +47,7 @@
     .editor-highlight, #editor { padding:8px 10px; margin:0; border:0; font-family:inherit; font-size:inherit; line-height:inherit; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:4; }
     .editor-highlight { position:absolute; inset:0; color:#1c180d; pointer-events:none; overflow:hidden; background:transparent; }
     #editor { position:absolute; inset:0; background:transparent; color:transparent; caret-color:#1c180d; resize:none; outline:none; width:100%; height:100%; overflow:auto; }
-    .tok-kw{color:#1200ff;font-weight:bold} .tok-type{color:#e404ff} .tok-str{color:#22a324} .tok-num{color:#ff0000} .tok-cmt{color:#048b86;font-style:italic} .tok-op{color:#e6b01d} .tok-bool{color:#005cc5} .tok-name{color:#6f42c1} .tok-var{color:#e36209}
+    .tok-kw{color:#1200ff;font-weight:bold} .tok-type{color:#e404ff} .tok-str{color:#22a324} .tok-num{color:#ff0000} .tok-cmt{color:#048b86;font-style:italic} .tok-op{color:#e6b01d} .tok-bool{color:#005cc5} .tok-name{color:#6f42c1} .tok-var{color:#e36209} .tok-game{color:#0d47a1;font-weight:600;background:rgba(187,222,251,0.45);border-radius:3px;padding:0 1px}
     .console,.errors{padding:10px;overflow:auto;font-family:"Consolas","Monaco",monospace;font-size:13px;white-space:pre-wrap;word-wrap:break-word;color:#1c180d;height:100%}
     .errors{color:#b31d28} .errors .err-line{padding:3px 6px;border-left:3px solid #b31d28;margin-bottom:4px;background:rgba(179,29,40,0.08)} .errors .err-phase{font-weight:bold;color:#d73a49} .errors .err-ok{color:#22863a;border-left-color:#22863a;background:rgba(34,134,58,0.08)}
     .console .out{color:#1c180d} .console .in{color:#005cc5} .console .info{color:#9c8749;font-style:italic}
@@ -237,84 +237,66 @@
         </div>
       </div>
 
-      <!-- Sidebar content changes based on active tab -->
-      <div id="sidebar-code" class="flex flex-col flex-1 min-h-0">
-        <div class="p-2 border-b border-border-light flex flex-col gap-1">
-          <div class="flex gap-1">
-            <select id="example-select" class="flex-1 bg-background-light border border-border-light rounded px-2 py-1 text-xs"></select>
-            <button id="btn-example" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 text-xs" title="Cargar ejemplo">
-              <span class="material-symbols-outlined" style="font-size:16px">upload_file</span>
-            </button>
-          </div>
-          <div class="flex gap-1">
-            <button id="btn-run" class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-full bg-primary text-text-light text-xs font-bold hover:bg-primary/80">
-              <span class="material-symbols-outlined" style="font-size:16px">play_arrow</span> Ejecutar
-            </button>
-            <button id="btn-stop" class="px-2 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs" style="display:none" title="Detener">
-              <span class="material-symbols-outlined" style="font-size:16px">stop</span>
-            </button>
-            <button id="btn-clear" class="px-2 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs" title="Limpiar todo">
-              <span class="material-symbols-outlined" style="font-size:16px">cleaning_services</span>
-            </button>
-          </div>
-          <label class="flex items-center gap-2 px-2 py-1 text-xs cursor-pointer hover:bg-primary/5 rounded">
-            <input type="checkbox" id="step-mode" class="w-3.5 h-3.5 rounded border-border-light" />
-            <span class="text-text-light-muted">Ejecución paso a paso</span>
-          </label>
-        </div>
-        <div class="section-label">
-          <span class="material-symbols-outlined">extension</span> Bloques
-        </div>
-        <div id="block-palette" class="sidebar-blocks p-1"></div>
-      </div>
-
-      <div id="sidebar-game" class="flex flex-col flex-1 min-h-0" style="display:none;">
-        <div class="p-2 border-b border-border-light flex flex-col gap-1">
-          <div class="flex gap-1">
-            <button id="game-btn-run" class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-full bg-primary text-text-light text-xs font-bold hover:bg-primary/80">
-              <span class="material-symbols-outlined" style="font-size:16px">play_arrow</span> Ejecutar
-            </button>
-            <button id="game-btn-pause" class="px-2 py-1.5 rounded-full bg-yellow-500/30 hover:bg-yellow-500/40 text-xs" style="display:none" title="Pausar">
-              <span class="material-symbols-outlined" style="font-size:16px">pause</span>
-            </button>
-            <button id="game-btn-stop" class="px-2 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs" style="display:none" title="Detener">
-              <span class="material-symbols-outlined" style="font-size:16px">stop</span>
-            </button>
-            <button id="game-btn-reset" class="px-2 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs" title="Reiniciar nivel">
-              <span class="material-symbols-outlined" style="font-size:16px">restart_alt</span>
-            </button>
-          </div>
-          <div class="flex gap-1">
-            <button id="game-btn-levels" class="flex-1 px-2 py-1.5 rounded-full bg-primary/20 hover:bg-primary/30 text-xs" title="Seleccionar nivel">
-              <span class="material-symbols-outlined" style="font-size:16px">grid_view</span> Niveles
-            </button>
-            <button id="game-btn-help" class="px-2 py-1.5 rounded-full bg-primary/20 hover:bg-primary/30 text-xs" title="Ayuda">
-              <span class="material-symbols-outlined" style="font-size:16px">help</span>
-            </button>
-          </div>
-        </div>
+      <!-- Game info section (always visible) -->
+      <div id="sidebar-game-info" class="border-b border-border-light">
         <div class="section-label">
           <span class="material-symbols-outlined">flag</span> Nivel <span id="game-level-label" style="margin-left:auto; font-weight:400; text-transform:none;">1</span>
         </div>
-        <div class="p-2 overflow-y-auto flex-1">
-          <div id="game-goals" class="mb-3"></div>
+        <div class="p-2" style="max-height:140px; overflow-y:auto;">
+          <div id="game-goals" class="mb-2"></div>
           <div class="text-xs font-bold text-text-light-muted uppercase tracking-wide mb-1">Descripción</div>
-          <div id="game-desc" class="text-xs text-text-light leading-relaxed mb-3"></div>
+          <div id="game-desc" class="text-xs text-text-light leading-relaxed mb-2"></div>
           <div class="text-xs font-bold text-text-light-muted uppercase tracking-wide mb-1">Pistas</div>
           <div id="game-hints"></div>
         </div>
       </div>
+
+      <!-- Unified Controls (always visible) -->
+      <div class="p-2 border-b border-border-light flex flex-col gap-1">
+        <div class="flex gap-1">
+          <button id="btn-run" class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-full bg-primary text-text-light text-xs font-bold hover:bg-primary/80">
+            <span class="material-symbols-outlined" style="font-size:16px">play_arrow</span> Ejecutar
+          </button>
+          <button id="btn-stop" class="px-2 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs" style="display:none" title="Detener">
+            <span class="material-symbols-outlined" style="font-size:16px">stop</span>
+          </button>
+          <button id="btn-pause" class="px-2 py-1.5 rounded-full bg-yellow-500/30 hover:bg-yellow-500/40 text-xs" style="display:none" title="Pausar">
+            <span class="material-symbols-outlined" style="font-size:16px">pause</span>
+          </button>
+          <button id="btn-reset" class="px-2 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs" title="Reiniciar nivel">
+            <span class="material-symbols-outlined" style="font-size:16px">restart_alt</span>
+          </button>
+          <button id="btn-clear" class="px-2 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs" title="Limpiar todo">
+            <span class="material-symbols-outlined" style="font-size:16px">cleaning_services</span>
+          </button>
+        </div>
+        <div class="flex gap-1">
+          <select id="example-select" class="flex-1 bg-background-light border border-border-light rounded px-2 py-1 text-xs"></select>
+          <button id="btn-example" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 text-xs" title="Cargar ejemplo">
+            <span class="material-symbols-outlined" style="font-size:16px">upload_file</span>
+          </button>
+          <button id="btn-levels" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 text-xs" title="Seleccionar nivel">
+            <span class="material-symbols-outlined" style="font-size:16px">grid_view</span>
+          </button>
+        </div>
+        <label class="flex items-center gap-2 px-2 py-1 text-xs cursor-pointer hover:bg-primary/5 rounded">
+          <input type="checkbox" id="step-mode" class="w-3.5 h-3.5 rounded border-border-light" />
+          <span class="text-text-light-muted">Ejecución paso a paso</span>
+        </label>
+      </div>
+
+      <!-- Block palette (always visible) -->
+      <div class="section-label">
+        <span class="material-symbols-outlined">extension</span> Bloques
+      </div>
+      <div id="block-palette" class="sidebar-blocks p-1 flex-1"></div>
     </aside>
 
     <!-- === MAIN CONTENT AREA === -->
     <div id="main-area" style="flex:1; display:flex; flex-direction:column; min-width:0; overflow:hidden;">
       <!-- === MAIN TABS BAR === -->
       <div class="main-tabs-bar">
-		<button class="main-tab" data-main-tab="game">
-          <span class="material-symbols-outlined">sports_esports</span>
-          Juego
-        </button>
-        <button class="main-tab active" data-main-tab="code">
+        <button class="main-tab" data-main-tab="code">
           <span class="material-symbols-outlined">code</span>
           Editor de Codigo
         </button>
@@ -325,6 +307,10 @@
         <button class="main-tab" data-main-tab="diagram">
           <span class="material-symbols-outlined">flowchart</span>
           Diagrama de Flujo
+        </button>
+        <button class="main-tab" data-main-tab="game">
+          <span class="material-symbols-outlined">sports_esports</span>
+          Juego
         </button>
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px;padding:0 8px;">
           <button id="btn-layout-code" class="layout-btn active" title="Solo Editor" data-layout="code">
@@ -342,96 +328,95 @@
         </div>
       </div>
 
-      <!-- === SPLIT VIEW CONTAINER (hidden by default) === -->
-      <div id="split-view-container" style="display:none;flex:1;min-height:0;overflow:hidden;">
-        <div id="split-editor-pane" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:2px solid #e8e2ce;">
-          <!-- Editor or blocks content will be cloned/shown here -->
-        </div>
-        <div id="split-game-pane" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;">
-          <!-- Game content will be shown here -->
-        </div>
-      </div>
-
-      <!-- === TAB 1: CODE EDITOR === -->
-      <div class="main-tab-panel active" data-panel="code">
-        <div class="section-label">
-          <span class="material-symbols-outlined">edit_note</span>
-          Codigo PSeInt
-        </div>
-        <div style="flex:1; min-height:0; overflow:hidden;">
-          <div class="editor-wrapper" style="border-radius:0; border:none; height:100%;">
-            <div id="line-numbers" class="line-numbers"></div>
-            <div id="editor-container" class="editor-container">
-              <pre id="editor-highlight" class="editor-highlight" aria-hidden="true"></pre>
-              <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Escribe tu pseudocodigo aqui..."></textarea>
-              <div id="search-bar" class="search-bar">
-                <input type="text" id="search-input" placeholder="Buscar..." autocomplete="off" />
-                <span class="search-info" id="search-info"></span>
-                <button id="search-prev" title="Anterior (Shift+Enter)">&#9650;</button>
-                <button id="search-next" title="Siguiente (Enter)">&#9660;</button>
-                <button id="search-close" title="Cerrar (Esc)">&#10005;</button>
+      <!-- === CONTENT WRAPPER (handles split layout) === -->
+      <div id="content-wrapper" style="flex:1; display:flex; min-height:0; overflow:hidden;">
+        <!-- === EDITOR PANEL (code or blocks) === -->
+        <div id="editor-panel" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden;">
+          <!-- TAB 1: CODE EDITOR -->
+          <div class="main-tab-panel active" data-panel="code" style="flex:1; min-height:0;">
+            <div class="section-label">
+              <span class="material-symbols-outlined">edit_note</span>
+              Codigo PSeInt
+            </div>
+            <div style="flex:1; min-height:0; overflow:hidden;">
+              <div class="editor-wrapper" style="border-radius:0; border:none; height:100%;">
+                <div id="line-numbers" class="line-numbers"></div>
+                <div id="editor-container" class="editor-container">
+                  <pre id="editor-highlight" class="editor-highlight" aria-hidden="true"></pre>
+                  <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Escribe tu pseudocodigo aqui..."></textarea>
+                  <div id="search-bar" class="search-bar">
+                    <input type="text" id="search-input" placeholder="Buscar..." autocomplete="off" />
+                    <span class="search-info" id="search-info"></span>
+                    <button id="search-prev" title="Anterior (Shift+Enter)">&#9650;</button>
+                    <button id="search-next" title="Siguiente (Enter)">&#9660;</button>
+                    <button id="search-close" title="Cerrar (Esc)">&#10005;</button>
+                  </div>
+                  <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+                </div>
               </div>
-              <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+            </div>
+          </div>
+
+          <!-- TAB 2: BLOCK EDITOR -->
+          <div class="main-tab-panel" data-panel="blocks" style="flex:1; min-height:0;">
+            <div class="section-label">
+              <span class="material-symbols-outlined">extension</span>
+              Editor de Bloques
+              <span style="margin-left:auto; font-weight:400; font-size:10px; color:#b0a070; text-transform:none;">Arrastra bloques desde el menu izquierdo | Ctrl+Z deshacer</span>
+            </div>
+            <div id="block-workspace" class="block-workspace" style="flex:1;">
+              <div id="block-list"></div>
+              <div id="block-drop-zone" style="min-height:60px; display:flex; align-items:center; justify-content:center; color:#b0a070; font-size:13px; font-style:italic;">
+                Arrastra bloques aqui para construir tu algoritmo
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: DIAGRAM -->
+          <div class="main-tab-panel" data-panel="diagram" style="flex:1; min-height:0;">
+            <div class="section-label">
+              <span class="material-symbols-outlined">flowchart</span>
+              Diagrama de Flujo
+              <div style="margin-left:auto; display:flex; gap:4px;">
+                <button id="zoom-in" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Acercar"><span class="material-symbols-outlined" style="font-size:16px">zoom_in</span></button>
+                <button id="zoom-out" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Alejar"><span class="material-symbols-outlined" style="font-size:16px">zoom_out</span></button>
+                <button id="zoom-reset" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Restablecer"><span class="material-symbols-outlined" style="font-size:16px">aspect_ratio</span></button>
+                <button id="btn-download-svg" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Descargar SVG"><span class="material-symbols-outlined" style="font-size:16px">download</span></button>
+              </div>
+            </div>
+            <div id="diagram-container" style="flex:1; overflow:hidden; position:relative;">
+              <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#b0a070; font-size:13px; font-style:italic;">
+                Ejecuta el codigo para ver el diagrama
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- === TAB 2: BLOCK EDITOR === -->
-      <div class="main-tab-panel" data-panel="blocks">
-        <div class="section-label">
-          <span class="material-symbols-outlined">extension</span>
-          Editor de Bloques
-          <span style="margin-left:auto; font-weight:400; font-size:10px; color:#b0a070; text-transform:none;">Arrastra bloques desde el menu izquierdo | Ctrl+Z deshacer</span>
-        </div>
-        <div id="block-workspace" class="block-workspace" style="flex:1;">
-          <div id="block-list"></div>
-          <div id="block-drop-zone" style="min-height:60px; display:flex; align-items:center; justify-content:center; color:#b0a070; font-size:13px; font-style:italic;">
-            Arrastra bloques aqui para construir tu algoritmo
-          </div>
-        </div>
-      </div>
+        <!-- === SPLIT DIVIDER (visible only in split modes) === -->
+        <div id="split-divider-v" style="display:none; width:4px; background:#e8e2ce; cursor:col-resize; flex-shrink:0; transition:background 0.15s;"></div>
 
-      <!-- === TAB 3: DIAGRAM === -->
-      <div class="main-tab-panel" data-panel="diagram">
-        <div class="section-label">
-          <span class="material-symbols-outlined">flowchart</span>
-          Diagrama de Flujo
-          <div style="margin-left:auto; display:flex; gap:4px;">
-            <button id="zoom-in" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Acercar"><span class="material-symbols-outlined" style="font-size:16px">zoom_in</span></button>
-            <button id="zoom-out" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Alejar"><span class="material-symbols-outlined" style="font-size:16px">zoom_out</span></button>
-            <button id="zoom-reset" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Restablecer"><span class="material-symbols-outlined" style="font-size:16px">aspect_ratio</span></button>
-            <button id="btn-download-svg" class="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30" title="Descargar SVG"><span class="material-symbols-outlined" style="font-size:16px">download</span></button>
+        <!-- === GAME PANEL (visible in split and game modes) === -->
+        <div id="game-panel" style="display:none; flex:1; min-width:0; flex-direction:column; overflow:hidden; background:#fcfbf8;">
+          <div class="section-label">
+            <span class="material-symbols-outlined">sports_esports</span>
+            <span id="game-level-title">Nivel 1: Primeros pasos</span>
+            <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+              <span id="game-instr-chip" class="game-chip">
+                <span class="material-symbols-outlined">functions</span>
+                <span id="game-instr-count">0</span> instr.
+              </span>
+              <span id="game-status-chip" class="game-chip game-chip-idle">Listo</span>
+            </div>
           </div>
-        </div>
-        <div id="diagram-container" style="flex:1; overflow:hidden; position:relative;">
-          <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#b0a070; font-size:13px; font-style:italic;">
-            Ejecuta el codigo para ver el diagrama
+          <div class="game-canvas-wrap">
+            <canvas id="game-canvas" width="640" height="640"></canvas>
+            <div id="game-overlay" class="game-overlay hidden"></div>
           </div>
-        </div>
-      </div>
-
-      <!-- === TAB 4: GAME === -->
-      <div class="main-tab-panel" data-panel="game">
-        <div class="section-label">
-          <span class="material-symbols-outlined">sports_esports</span>
-          <span id="game-level-title">Nivel 1: Primeros pasos</span>
-          <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
-            <span id="game-instr-chip" class="game-chip">
-              <span class="material-symbols-outlined">functions</span>
-              <span id="game-instr-count">0</span> instr.
-            </span>
-            <span id="game-status-chip" class="game-chip game-chip-idle">Listo</span>
+          <div class="game-speed-bar">
+            <span class="text-text-light-muted font-medium">Velocidad:</span>
+            <input type="range" id="game-speed" min="50" max="800" value="550" />
+            <span id="game-speed-lbl" class="font-bold text-primary">300ms</span>
           </div>
-        </div>
-        <div class="game-canvas-wrap">
-          <canvas id="game-canvas" width="640" height="640"></canvas>
-          <div id="game-overlay" class="game-overlay hidden"></div>
-        </div>
-        <div class="game-speed-bar">
-          <span class="text-text-light-muted font-medium">Velocidad:</span>
-          <input type="range" id="game-speed" min="50" max="800" value="300" />
-          <span id="game-speed-lbl" class="font-bold text-primary">300ms</span>
         </div>
       </div>
 

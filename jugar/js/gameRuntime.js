@@ -337,14 +337,9 @@ const BUILTINS = {
   async tomar(args, state, line){
     const w = state.world;
     if(w.player.carrying) throw RuntimeError('Ya llevas un objeto en el inventario', line);
-    const {x,y} = frontCell(w);
-    // Buscar caja al frente
-    let bidx = w.boxes.findIndex(b => b.x===x && b.y===y);
-    if(bidx < 0){
-      // También permitir tomar desde la misma casilla
-      bidx = w.boxes.findIndex(b => b.x===w.player.x && b.y===w.player.y);
-      if(bidx < 0) throw RuntimeError('No hay ningún objeto para tomar aquí', line);
-    }
+    // Solo permitir tomar desde la misma casilla donde está el jugador
+    const bidx = w.boxes.findIndex(b => b.x===w.player.x && b.y===w.player.y);
+    if(bidx < 0) throw RuntimeError('No hay ningún objeto para tomar aquí (debes estar en la misma casilla)', line);
     w.player.carrying = w.boxes.splice(bidx, 1)[0];
     await doAction(state, line);
   },
@@ -366,8 +361,9 @@ const BUILTINS = {
   },
   async activar(args, state, line){
     const w = state.world;
-    const sw = hasSwitchAt(w, w.player.x, w.player.y) || hasSwitchAt(w, frontCell(w).x, frontCell(w).y);
-    if(!sw) throw RuntimeError('No hay ningún interruptor aquí para activar', line);
+    // Solo permitir activar desde la misma casilla del interruptor
+    const sw = hasSwitchAt(w, w.player.x, w.player.y);
+    if(!sw) throw RuntimeError('No hay ningún interruptor aquí para activar (debes estar en la misma casilla)', line);
     sw.active = true;
     if(sw.targets){
       for(const t of sw.targets){
@@ -408,11 +404,11 @@ const BUILTINS = {
   async usar(args, state, line){
     const w = state.world;
     const f = frontCell(w);
-    // Intentar puerta
+    // Intentar puerta (desde la casilla de enfrente, lógica actual)
     const d = hasDoorAt(w, f.x, f.y);
     if(d){ d.open = !d.open; await doAction(state, line); return; }
-    // Intentar switch
-    const sw = hasSwitchAt(w, w.player.x, w.player.y) || hasSwitchAt(w, f.x, f.y);
+    // Intentar switch (solo desde la misma casilla)
+    const sw = hasSwitchAt(w, w.player.x, w.player.y);
     if(sw){
       sw.active = !sw.active;
       if(sw.targets) sw.targets.forEach(t => { const dd = w.doors.find(d => d.x===t.x && d.y===t.y); if(dd) dd.open = sw.active; });

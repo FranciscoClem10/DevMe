@@ -17,6 +17,9 @@ let controller = null;
 const renderer = makeRenderer(gameCanvas);
 let highlightLine = -1;
 
+// Variable para almacenar el código actual del usuario (persistencia en reset)
+let userCodeBackup = null;
+
 // Errores traducidos al espanol
 function tradError(msg){
   const map = {
@@ -45,25 +48,8 @@ function tradError(msg){
   return result;
 }
 
-// -------------- Sidebar switching --------------
-function switchSidebar(tabName){
-  $('sidebar-code').style.display = (tabName === 'game') ? 'none' : 'flex';
-  $('sidebar-game').style.display = (tabName === 'game') ? 'flex' : 'none';
-}
-
-// Listen to main tab changes
-document.querySelectorAll('.main-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const tabName = tab.dataset.mainTab;
-    switchSidebar(tabName);
-    if(tabName === 'game'){
-      setTimeout(()=>{ renderer.resize(); renderer.render(); }, 50);
-    }
-  });
-});
-
 // -------------- Carga de niveles --------------
-function loadLevel(idx){
+function loadLevel(idx, isReset){
   currentLevelIdx = idx;
   localStorage.setItem('cq_level', String(idx));
   const def = LEVELS[idx];
@@ -75,22 +61,18 @@ function loadLevel(idx){
   renderGoals();
   renderHints();
   renderer.setWorld(world);
-  // Exponer mundo para el renderer de split view
-  window.__gameWorld = world;
-  if (window.__splitRenderer) {
-    window.__splitRenderer.setWorld(world);
-  }
-  // Actualizar título en split view
-  const splitGameTitle = $('split-game-title');
-  if (splitGameTitle) splitGameTitle.textContent = `Nivel ${def.id}: ${def.name}`;
   setGameStatus('idle','Listo');
   updateInstrCount(0);
   hideGameOverlay();
 
-  // Cargar código starter en el editor de código y sincronizar bloques
-  if (def.starter && typeof window.loadStarterCode === 'function') {
+  // Cargar código starter solo si es la primera vez que se carga el nivel
+  // (no en reset). En reset, preservar el código del usuario.
+  if (!isReset && def.starter && typeof window.loadStarterCode === 'function') {
     window.loadStarterCode(def.starter);
+  } else if (!isReset && !def.starter) {
+    // Si no hay starter, cargar ejemplo por defecto
   }
+  // En reset: NO tocar el editor, solo resetear el mundo
 }
 
 function renderGoals(){
@@ -234,31 +216,32 @@ async function runGameProgram(){
 
   controller = new AbortController();
   setGameStatus('running','Ejecutando...');
-  $('game-btn-run').disabled = true;
-  $('game-btn-stop').style.display = 'inline-flex';
-  $('game-btn-pause').style.display = 'inline-flex';
-  $('game-btn-pause').dataset.paused = 'false';
+  $('btn-run').disabled = true;
+  $('btn-stop').style.display = 'inline-flex';
+  $('btn-pause').style.display = 'inline-flex';
+  $('btn-pause').dataset.paused = 'false';
+  $('btn-pause').querySelector('.material-symbols-outlined').textContent = 'pause';
   hideGameOverlay();
   updateInstrCount(0);
 
   const ui = {
-    getStepDelay: ()=> parseInt(gameSpeed.value,10),
+    getStepDelay: ()=> (850 - parseInt(gameSpeed.value,10)),
     onStep: (line)=>{ highlightLine=line; },
-    render: ()=>{ renderer.render(); if(window.__splitRenderer) window.__splitRenderer.render(); updateGoalsUI(); },
+    render: ()=>{ renderer.render(); updateGoalsUI(); },
     updateCounter: (n)=>{ updateInstrCount(n); },
     log: gameLog,
     checkGoals: ()=>{ updateGoalsUI(); return checkGoalsSilent(); },
     checkGoalsSilent: ()=> checkGoalsSilent(),
-    sayBubble: (m)=>{ renderer.sayBubble(m); if(window.__splitRenderer) window.__splitRenderer.sayBubble(m); },
+    sayBubble: (m)=>{ renderer.sayBubble(m); },
     onPause: ()=>{
       setGameStatus('running','Pausado');
-      $('game-btn-pause').dataset.paused = 'true';
-      $('game-btn-pause').querySelector('.material-symbols-outlined').textContent = 'play_arrow';
+      $('btn-pause').dataset.paused = 'true';
+      $('btn-pause').querySelector('.material-symbols-outlined').textContent = 'play_arrow';
     },
     onResume: ()=>{
       setGameStatus('running','Ejecutando...');
-      $('game-btn-pause').dataset.paused = 'false';
-      $('game-btn-pause').querySelector('.material-symbols-outlined').textContent = 'pause';
+      $('btn-pause').dataset.paused = 'false';
+      $('btn-pause').querySelector('.material-symbols-outlined').textContent = 'pause';
     }
   };
 
@@ -287,23 +270,30 @@ async function runGameProgram(){
     }
   } finally {
     controller = null;
-    $('game-btn-run').disabled = false;
-    $('game-btn-stop').style.display = 'none';
-    $('game-btn-pause').style.display = 'none';
-    $('game-btn-pause').querySelector('.material-symbols-outlined').textContent = 'pause';
-    $('game-btn-pause').dataset.paused = 'false';
+    $('btn-run').disabled = false;
+    $('btn-stop').style.display = 'none';
+    $('btn-pause').style.display = 'none';
+    $('btn-pause').querySelector('.material-symbols-outlined').textContent = 'pause';
+    $('btn-pause').dataset.paused = 'false';
     window.__gameState = null;
   }
 }
 
 function stopGameProgram(){
   if(controller) controller.abort();
-  // Also resume if paused so the abort can propagate
   if(window.__gameState && window.__gameState.paused) window.__gameState.resume();
 }
 
 function togglePauseGame(){
   if(window.__gameState) window.__gameState.togglePause();
+}
+
+function resetGame(){
+  // Detener ejecución si está corriendo
+  if(controller) controller.abort();
+  if(window.__gameState && window.__gameState.paused) window.__gameState.resume();
+  // Reiniciar SOLO el mundo, NO el código del editor
+  loadLevel(currentLevelIdx, true);
 }
 
 function onGameWin(n){
@@ -359,16 +349,12 @@ function renderLevelsGrid(){
   });
 }
 
-// -------------- Event listeners --------------
-$('game-btn-run').addEventListener('click', runGameProgram);
-$('game-btn-stop').addEventListener('click', stopGameProgram);
-$('game-btn-pause').addEventListener('click', togglePauseGame);
-$('game-btn-reset').addEventListener('click', ()=>{
-  if(controller) controller.abort();
-  if(window.__gameState && window.__gameState.paused) window.__gameState.resume();
-  loadLevel(currentLevelIdx);
-});
-$('game-btn-levels').addEventListener('click', ()=>{ renderLevelsGrid(); $('game-levels-modal').style.display='flex'; });
+// -------------- Event listeners (botones unificados) --------------
+$('btn-run').addEventListener('click', runGameProgram);
+$('btn-stop').addEventListener('click', stopGameProgram);
+$('btn-pause').addEventListener('click', togglePauseGame);
+$('btn-reset').addEventListener('click', resetGame);
+$('btn-levels').addEventListener('click', ()=>{ renderLevelsGrid(); $('game-levels-modal').style.display='flex'; });
 $('game-close-levels').addEventListener('click', ()=>{ $('game-levels-modal').style.display='none'; });
 $('game-win-retry').addEventListener('click', ()=>{ $('game-win-modal').style.display='none'; loadLevel(currentLevelIdx); });
 $('game-win-next').addEventListener('click', ()=>{
@@ -377,10 +363,18 @@ $('game-win-next').addEventListener('click', ()=>{
   if(next<LEVELS.length) loadLevel(next);
   else { renderLevelsGrid(); $('game-levels-modal').style.display='flex'; }
 });
-gameSpeed.addEventListener('input', ()=>{ gameSpeedLbl.textContent=gameSpeed.value+'ms'; });
+gameSpeed.addEventListener('input', ()=>{
+  const inverted = 850 - parseInt(gameSpeed.value, 10);
+  gameSpeedLbl.textContent=inverted+'ms';
+});
 
 // -------------- Inicio --------------
 loadLevel(currentLevelIdx);
-gameSpeedLbl.textContent = gameSpeed.value+'ms';
+gameSpeedLbl.textContent = (850 - parseInt(gameSpeed.value,10))+'ms';
+
+// Exponer funciones globalmente
+window.resetGame = resetGame;
+window.runGameProgram = runGameProgram;
+window.stopGameProgram = stopGameProgram;
 
 })();
