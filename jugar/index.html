@@ -47,7 +47,7 @@
     .editor-highlight, #editor { padding:8px 10px; margin:0; border:0; font-family:inherit; font-size:inherit; line-height:inherit; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:4; }
     .editor-highlight { position:absolute; inset:0; color:#1c180d; pointer-events:none; overflow:hidden; background:transparent; }
     #editor { position:absolute; inset:0; background:transparent; color:transparent; caret-color:#1c180d; resize:none; outline:none; width:100%; height:100%; overflow:auto; }
-    .tok-kw{color:#1200ff;font-weight:bold} .tok-type{color:#e404ff} .tok-str{color:#22a324} .tok-num{color:#ff0000} .tok-cmt{color:#048b86;font-style:italic} .tok-op{color:#e6b01d} .tok-bool{color:#005cc5} .tok-name{color:#6f42c1} .tok-var{color:#e36209} .tok-game{color:#0d47a1;font-weight:600;background:rgba(187,222,251,0.45);border-radius:3px;padding:0 1px}
+    .tok-kw{color:#1200ff;font-weight:bold} .tok-type{color:#e404ff} .tok-str{color:#22a324} .tok-num{color:#ff0000} .tok-cmt{color:#048b86;font-style:italic} .tok-op{color:#e6b01d} .tok-bool{color:#005cc5} .tok-name{color:#6f42c1} .tok-var{color:#e36209}     .tok-game{color:#4A148C;font-weight:600}
     .console,.errors{padding:10px;overflow:auto;font-family:"Consolas","Monaco",monospace;font-size:13px;white-space:pre-wrap;word-wrap:break-word;color:#1c180d;height:100%}
     .errors{color:#b31d28} .errors .err-line{padding:3px 6px;border-left:3px solid #b31d28;margin-bottom:4px;background:rgba(179,29,40,0.08)} .errors .err-phase{font-weight:bold;color:#d73a49} .errors .err-ok{color:#22863a;border-left-color:#22863a;background:rgba(34,134,58,0.08)}
     .console .out{color:#1c180d} .console .in{color:#005cc5} .console .info{color:#9c8749;font-style:italic}
@@ -223,31 +223,30 @@
     .game-level-card.locked:hover { transform:none; border-color:#e8e2ce; }
     .game-speed-bar { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:#f5f3ee; border-top:1px solid #e8e2ce; font-size:0.75rem; }
     .game-speed-bar input[type=range] { flex:1; accent-color:#f4c025; }
+
+    /* === Sidebar resize handle === */
+    #sidebar-resize-handle { width:5px; cursor:col-resize; background:transparent; flex-shrink:0; position:relative; z-index:50; transition:background 0.15s; }
+    #sidebar-resize-handle:hover, #sidebar-resize-handle.active { background:#f4c025; }
+    #sidebar-collapse-btn { position:absolute; top:50%; left:-12px; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:#f4c025; border:1px solid #e8e2ce; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:60; box-shadow:0 2px 6px rgba(0,0,0,0.15); transition:all 0.2s; font-size:14px; color:#1c180d; }
+    #sidebar-collapse-btn:hover { background:#e5b321; transform:translateY(-50%) scale(1.1); }
+    #sidebar-expand-btn { position:absolute; top:50%; left:4px; transform:translateY(-50%); width:28px; height:28px; border-radius:50%; background:#f4c025; border:1px solid #e8e2ce; cursor:pointer; display:none; align-items:center; justify-content:center; z-index:60; box-shadow:0 2px 6px rgba(0,0,0,0.15); font-size:16px; color:#1c180d; }
+    #sidebar-expand-btn:hover { background:#e5b321; }
+
+    /* === Console clear button === */
+    .console-toolbar { display:flex; align-items:center; gap:4px; margin-left:auto; padding:0 8px; }
+    .console-toolbar button { background:transparent; border:none; cursor:pointer; color:#9c8749; padding:3px 6px; border-radius:4px; font-size:14px; display:flex; align-items:center; transition:all 0.15s; }
+    .console-toolbar button:hover { background:rgba(179,29,40,0.1); color:#b31d28; }
   </style>
 </head>
 <body class="bg-background-light font-display text-text-light overflow-hidden">
-  <div class="flex h-screen w-full">
+  <div class="flex h-screen w-full" style="position:relative;">
     <!-- === LEFT SIDEBAR === -->
-    <aside id="sidebar" class="flex flex-col border-r border-border-light bg-background-light" style="width:220px; flex-shrink:0;">
+    <aside id="sidebar" class="flex flex-col border-r border-border-light bg-background-light" style="width:220px; flex-shrink:0; min-width:140px; max-width:400px; transition:width 0.25s ease, min-width 0.25s ease, opacity 0.25s ease; overflow:hidden;">
       <div class="p-3 border-b border-border-light flex items-center gap-2">
         <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8" style='background-image:url("imgs/icono.png");'></div>
         <div>
           <h1 class="text-sm font-semibold leading-tight">DevMe</h1>
           <p class="text-xs text-text-light-muted">Aprende a programar</p>
-        </div>
-      </div>
-
-      <!-- Game info section (always visible) -->
-      <div id="sidebar-game-info" class="border-b border-border-light">
-        <div class="section-label">
-          <span class="material-symbols-outlined">flag</span> Nivel <span id="game-level-label" style="margin-left:auto; font-weight:400; text-transform:none;">1</span>
-        </div>
-        <div class="p-2" style="max-height:140px; overflow-y:auto;">
-          <div id="game-goals" class="mb-2"></div>
-          <div class="text-xs font-bold text-text-light-muted uppercase tracking-wide mb-1">Descripción</div>
-          <div id="game-desc" class="text-xs text-text-light leading-relaxed mb-2"></div>
-          <div class="text-xs font-bold text-text-light-muted uppercase tracking-wide mb-1">Pistas</div>
-          <div id="game-hints"></div>
         </div>
       </div>
 
@@ -292,6 +291,17 @@
       <div id="block-palette" class="sidebar-blocks p-1 flex-1"></div>
     </aside>
 
+    <!-- === SIDEBAR RESIZE HANDLE === -->
+    <div id="sidebar-resize-handle">
+      <button id="sidebar-collapse-btn" title="Colapsar menú">
+        <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
+      </button>
+    </div>
+    <!-- === SIDEBAR EXPAND BUTTON (when collapsed) === -->
+    <button id="sidebar-expand-btn" title="Expandir menú">
+      <span class="material-symbols-outlined" style="font-size:18px;">menu</span>
+    </button>
+
     <!-- === MAIN CONTENT AREA === -->
     <div id="main-area" style="flex:1; display:flex; flex-direction:column; min-width:0; overflow:hidden;">
       <!-- === MAIN TABS BAR === -->
@@ -313,14 +323,14 @@
           Juego
         </button>
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px;padding:0 8px;">
-          <button id="btn-layout-code" class="layout-btn active" title="Solo Editor" data-layout="code">
-            <span class="material-symbols-outlined" style="font-size:18px">code</span>
-          </button>
-          <button id="btn-layout-split-code" class="layout-btn" title="Editor + Juego" data-layout="split-code">
+          <button id="btn-layout-split-code" class="layout-btn active" title="Editor + Juego" data-layout="split-code">
             <span class="material-symbols-outlined" style="font-size:18px">vertical_split</span>
           </button>
           <button id="btn-layout-split-blocks" class="layout-btn" title="Bloques + Juego" data-layout="split-blocks">
             <span class="material-symbols-outlined" style="font-size:18px">dashboard</span>
+          </button>
+          <button id="btn-layout-diagram" class="layout-btn" title="Diagrama de Flujo" data-layout="diagram">
+            <span class="material-symbols-outlined" style="font-size:18px">flowchart</span>
           </button>
           <button id="btn-layout-game" class="layout-btn" title="Solo Juego" data-layout="game">
             <span class="material-symbols-outlined" style="font-size:18px">sports_esports</span>
@@ -429,7 +439,13 @@
           <button class="tab active" data-tab="console">Consola</button>
           <button class="tab" data-tab="errors">Errores</button>
           <button class="tab" data-tab="debug">Bug</button>
+          <button class="tab" data-tab="level">Nivel</button>
           <span class="line-counter" id="line-counter">Ln 1, Col 1</span>
+          <div class="console-toolbar">
+            <button id="btn-clear-console" title="Limpiar consola">
+              <span class="material-symbols-outlined" style="font-size:16px;">delete_outline</span>
+            </button>
+          </div>
         </div>
         <div id="tab-console" class="tab-content active">
           <div id="console" class="console bg-panal"></div>
@@ -445,6 +461,23 @@
         <div id="tab-debug" class="tab-content bg-panal">
 		  <img src="imgs/Proximamente.png" alt="En progreso" style="width:100%; height:100%; object-fit:contain;" />
 		</div>
+        <div id="tab-level" class="tab-content" style="overflow:auto;">
+          <div style="padding:10px; display:flex; flex-direction:column; gap:8px; height:100%; overflow:auto;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="material-symbols-outlined" style="color:#f4c025;">flag</span>
+              <span style="font-weight:700; font-size:13px;">Nivel <span id="game-level-label">1</span>: <span id="game-level-name-tab"></span></span>
+              <button id="btn-levels-tab" style="margin-left:auto; padding:3px 10px; background:#f4c025; border:none; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px;">
+                <span class="material-symbols-outlined" style="font-size:14px;">grid_view</span> Seleccionar nivel
+              </button>
+            </div>
+            <div id="game-goals" style="display:flex; flex-direction:column; gap:3px;"></div>
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#9c8749;">Descripción</div>
+            <div id="game-desc" style="font-size:12px; line-height:1.5;"></div>
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#9c8749;">Pistas</div>
+            <div id="game-hints"></div>
+            <div id="game-stars-display" style="display:flex; align-items:center; gap:6px; font-size:13px; color:#9c8749;"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

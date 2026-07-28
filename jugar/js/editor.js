@@ -747,14 +747,44 @@ textarea.addEventListener('keydown', function (e) {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const value = textarea.value;
+  const INDENT = '    ';
 
-  // Encontrar los límites de las líneas afectadas por la selección
+  // Si NO hay selección (solo cursor), insertar/eliminar espacios en la posición del cursor
+  if (start === end) {
+    if (e.shiftKey) {
+      // Shift+Tab: eliminar hasta 4 espacios antes del cursor en la misma línea
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      const textBefore = value.substring(lineStart, start);
+      // Count spaces/tabs at beginning of text before cursor
+      let spacesToRemove = 0;
+      for (let i = textBefore.length - 1; i >= 0 && i >= textBefore.length - 4; i--) {
+        if (textBefore[i] === ' ') spacesToRemove++;
+        else break;
+      }
+      if (spacesToRemove > 0) {
+        const removeStart = start - spacesToRemove;
+        textarea.value = value.substring(0, removeStart) + value.substring(start);
+        textarea.selectionStart = textarea.selectionEnd = removeStart;
+      }
+    } else {
+      // Tab: insertar 4 espacios en la posición del cursor
+      textarea.value = value.substring(0, start) + INDENT + value.substring(start);
+      textarea.selectionStart = textarea.selectionEnd = start + INDENT.length;
+    }
+    update();
+    if (window.Editor && window.Editor.updateLineCounter) {
+      window.Editor.updateLineCounter();
+    }
+    return;
+  }
+
+  // Si HAY selección, operar en las líneas seleccionadas
   const lines = value.split('\n');
   let lineStartIdx = value.lastIndexOf('\n', Math.max(start - 1, 0)) + 1;
   let lineEndIdx = value.indexOf('\n', end);
   if (lineEndIdx === -1) lineEndIdx = value.length;
 
-  // Obtener el número de línea de inicio y fin (0‑based)
+  // Obtener el número de línea de inicio y fin (0-based)
   let lineStart = 0;
   let pos = 0;
   for (let i = 0; i < lines.length; i++) {
@@ -775,8 +805,6 @@ textarea.addEventListener('keydown', function (e) {
   }
   // Asegurar que al menos se procese la línea donde está el cursor
   if (lineEnd < lineStart) lineEnd = lineStart;
-
-  const INDENT = '    ';
 
   if (e.shiftKey) {
     // Desindentar: eliminar 4 espacios al inicio de cada línea afectada

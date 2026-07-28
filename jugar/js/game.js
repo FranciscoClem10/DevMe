@@ -58,8 +58,12 @@ function loadLevel(idx, isReset){
   $('game-level-title').textContent = `Nivel ${def.id}: ${def.name}`;
   $('game-level-label').textContent = def.id;
   $('game-desc').textContent = def.desc;
+  // Update Nivel tab name
+  const levelNameTab = $('game-level-name-tab');
+  if (levelNameTab) levelNameTab.textContent = def.name;
   renderGoals();
   renderHints();
+  updateStarsDisplay();
   renderer.setWorld(world);
   setGameStatus('idle','Listo');
   updateInstrCount(0);
@@ -191,6 +195,9 @@ function gameLog(msg, cls){
 // -------------- Ejecucion del juego --------------
 async function runGameProgram(){
   if(controller) return;
+  // Limpiar consola automáticamente antes de cada ejecución
+  const consoleEl = $('console');
+  if(consoleEl) consoleEl.innerHTML = '';
   world = buildLevel(world.def);
   renderer.setWorld(world);
   updateGoalsUI();
@@ -356,6 +363,23 @@ $('btn-pause').addEventListener('click', togglePauseGame);
 $('btn-reset').addEventListener('click', resetGame);
 $('btn-levels').addEventListener('click', ()=>{ renderLevelsGrid(); $('game-levels-modal').style.display='flex'; });
 $('game-close-levels').addEventListener('click', ()=>{ $('game-levels-modal').style.display='none'; });
+
+function updateStarsDisplay() {
+  const starsEl = $('game-stars-display');
+  if (!starsEl || !world || !world.def) return;
+  const prog = JSON.parse(localStorage.getItem('cq_progress') || '{}');
+  const stars = prog[world.def.id] || 0;
+  starsEl.innerHTML = 'Progreso: ' + [1,2,3].map(n =>
+    n <= stars ? '<span style="color:#f4c025;font-size:18px;">★</span>' : '<span style="color:#e8e2ce;font-size:18px;">★</span>'
+  ).join('');
+}
+
+function openLevelSelector() {
+  renderLevelsGrid();
+  $('game-levels-modal').style.display = 'flex';
+}
+
+window.openLevelSelector = openLevelSelector;
 $('game-win-retry').addEventListener('click', ()=>{ $('game-win-modal').style.display='none'; loadLevel(currentLevelIdx); });
 $('game-win-next').addEventListener('click', ()=>{
   $('game-win-modal').style.display='none';
@@ -376,5 +400,6 @@ gameSpeedLbl.textContent = (850 - parseInt(gameSpeed.value,10))+'ms';
 window.resetGame = resetGame;
 window.runGameProgram = runGameProgram;
 window.stopGameProgram = stopGameProgram;
+window.renderLevelsGrid = renderLevelsGrid;
 
 })();
