@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevMe — Editor de Niveles</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+  <link rel="icon" href="imgs/icono.png" type="image/png" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#f4c025",
+            "background-light": "#fcfbf8",
+            "text-light": "#1c180d",
+            "text-light-muted": "#9c8749",
+            "border-light": "#e8e2ce",
+          },
+          fontFamily: { display: ["Lexend", "sans-serif"] },
+          borderRadius: { DEFAULT: "1rem", lg: "1.5rem", xl: "2rem", full: "9999px" },
+        },
+      },
+    }
+  </script>
+  <style>
+    .bg-panal{background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="35" viewBox="0 0 60 35"><path d="M20 0 L40 0 L50 17.5 L40 35 L20 35 L10 17.5 Z M10 17.5 L0 17.5 M50 17.5 L60 17.5 M20 0 L10 17.5 M40 0 L50 17.5 M20 35 L10 17.5 M40 35 L50 17.5" fill="none" stroke="%23a7632b" stroke-opacity="0.05" stroke-width="4"/></svg>');background-size:60px 35px;background-repeat:repeat}
+    body{font-family:"Lexend",sans-serif;background:#fcfbf8;color:#1c180d}
+    .grid-canvas{display:inline-grid;gap:0;border:2px solid #4a3818;border-radius:4px;background:#4a3818}
+    .grid-cell{width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;cursor:pointer;position:relative;transition:all .1s;user-select:none;border:1px solid rgba(0,0,0,.08)}
+    .grid-cell:hover{outline:2px solid #f4c025;outline-offset:-2px;z-index:2}
+    .cell-empty{background:#e5d9a8}.cell-wall{background:#4a3818;color:#6b5423}.cell-player{background:#e5d9a8;color:#e53e3e}.cell-target{background:#e5d9a8;color:#f4c025}.cell-box{background:#e5d9a8;color:#a56526}.cell-switch{background:#e5d9a8;color:#888}.cell-door{background:#e5d9a8;color:#5b3a1a}.cell-door-locked{background:#e5d9a8;color:#8b0000}.cell-door-protected{background:#e5d9a8;color:#4a0080}.cell-key{background:#e5d9a8;color:#ffd700}.cell-item{background:#e5d9a8;color:#4488ff}.cell-npc{background:#e5d9a8;color:#4caf50}.cell-plate{background:#e5d9a8;color:#777}.cell-laser{background:#e5d9a8;color:#cc0000}
+    .palette-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;font-size:13px;font-weight:500}
+    .palette-item:hover{background:rgba(244,192,37,.1)}.palette-item.active{border-color:#f4c025;background:rgba(244,192,37,.15);font-weight:600}
+    .palette-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
+    .code-output{font-family:"Consolas","Monaco",monospace;font-size:12px;line-height:1.5;background:#1c180d;color:#fde68a;padding:16px;border-radius:8px;overflow:auto;white-space:pre;max-height:400px;tab-size:4}
+    .config-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+    .config-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9c8749}
+    .config-input{padding:6px 10px;border:1px solid #e8e2ce;border-radius:6px;font-family:inherit;font-size:13px;background:#fff;color:#1c180d}
+    .config-input:focus{outline:2px solid #f4c025;border-color:transparent}
+    .config-textarea{padding:8px 10px;border:1px solid #e8e2ce;border-radius:6px;font-family:inherit;font-size:12px;background:#fff;color:#1c180d;resize:vertical;min-height:60px}
+    .config-textarea:focus{outline:2px solid #f4c025;border-color:transparent}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9999px;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;border:none}
+    .btn-primary{background:#f4c025;color:#1c180d}.btn-primary:hover{background:#e5b321;transform:scale(1.02)}
+    .btn-outline{background:transparent;color:#9c8749;border:2px solid #e8e2ce}.btn-outline:hover{border-color:#f4c025;color:#1c180d}
+    .btn-danger{background:rgba(179,29,40,.1);color:#b31d28}.btn-danger:hover{background:rgba(179,29,40,.2)}
+    .btn-play{background:#22863a;color:#fff}.btn-play:hover{background:#1a6b2e;transform:scale(1.02)}
+    .btn-sm{padding:5px 10px;font-size:11px}
+    .editor-tabs{display:flex;border-bottom:2px solid #e8e2ce}
+    .editor-tab{padding:10px 20px;background:transparent;border:none;color:#9c8749;cursor:pointer;font-size:13px;font-weight:500;border-bottom:3px solid transparent;display:flex;align-items:center;gap:6px}
+    .editor-tab:hover{color:#1c180d;background:rgba(244,192,37,.08)}.editor-tab.active{color:#1c180d;border-bottom-color:#f4c025;font-weight:600}
+
+    /* === NEW LINK SYSTEM === */
+    .link-card{background:#fff;border:2px solid #e8e2ce;border-radius:12px;padding:14px;margin-bottom:12px;transition:border-color .15s}
+    .link-card:hover{border-color:#f4c025}
+    .link-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:700;font-size:14px}
+    .link-card-header .icon-badge{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+    .link-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9c8749;margin:8px 0 6px;display:flex;align-items:center;gap:4px}
+    .target-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid #e8e2ce;background:#f9f8f5;transition:all .15s;user-select:none;margin:2px}
+    .target-chip:hover{border-color:#f4c025;background:rgba(244,192,37,.08)}
+    .target-chip.selected{border-color:#22863a;background:rgba(34,134,58,.1);color:#22863a}
+    .target-chip .chip-icon{font-size:14px}
+    .target-chip .chip-remove{font-size:14px;opacity:.5;margin-left:2px}
+    .target-chip .chip-remove:hover{opacity:1;color:#b31d28}
+    .empty-hint{font-size:12px;color:#b0a070;font-style:italic;padding:8px 0}
+    .auto-badge{font-size:9px;background:#22863a;color:#fff;padding:1px 6px;border-radius:9999px;font-weight:700;margin-left:auto}
+    .link-arrow{color:#9c8749;font-size:18px;margin:0 4px}
+  </style>
+</head>
+<body class="bg-panal min-h-screen flex flex-col overflow-hidden">
+  <header class="flex items-center justify-between px-4 py-2 border-b border-border-light bg-background-light/80 backdrop-blur-sm flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center bg-primary">
+        <img src="imgs/icono.png" alt="Icono" style="width:24px;height:24px;border-radius:50%" />
+      </div>
+      <div>
+        <h1 class="text-sm font-bold leading-tight">Editor de Niveles</h1>
+        <p class="text-xs text-text-light-muted">DevMe</p>
+      </div>
+    </div>
+    <nav class="flex gap-3 text-xs font-medium">
+      <a href="index.html" class="text-text-light/70 hover:text-primary transition flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:16px">arrow_back</span> Juego</a>
+      <a href="../index.html" class="text-text-light/70 hover:text-primary transition flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:16px">home</span> Inicio</a>
+    </nav>
+  </header>
+
+  <div class="flex flex-1 min-h-0">
+    <!-- LEFT: Palette -->
+    <aside class="border-r border-border-light bg-background-light flex flex-col" style="width:200px;flex-shrink:0;overflow-y:auto">
+      <div class="p-3 border-b border-border-light">
+        <div class="config-label mb-2">Elementos</div>
+        <div id="palette" class="flex flex-col gap-1"></div>
+      </div>
+      <div class="p-3 border-b border-border-light">
+        <div class="config-label mb-2">Herramientas</div>
+        <div class="palette-item" data-tool="erase" onclick="setTool('erase')">
+          <div class="palette-icon" style="background:#fee2e2;color:#b31d28"><span class="material-symbols-outlined" style="font-size:16px">cleaning_services</span></div>
+          Borrar
+        </div>
+      </div>
+      <div class="p-3 flex-1">
+        <div class="config-label mb-2">Direccion inicial</div>
+        <select id="player-dir" class="config-input w-full">
+          <option value="derecha">Derecha</option><option value="izquierda">Izquierda</option><option value="arriba">Arriba</option><option value="abajo">Abajo</option>
+        </select>
+        <div class="config-label mt-3 mb-2">Tamano del mapa</div>
+        <div class="flex gap-2">
+          <div class="flex-1"><label class="text-xs text-text-light-muted">Ancho</label><input type="number" id="grid-width" class="config-input w-full" value="8" min="3" max="20" onchange="resizeGrid()" /></div>
+          <div class="flex-1"><label class="text-xs text-text-muted">Alto</label><input type="number" id="grid-height" class="config-input w-full" value="7" min="3" max="20" onchange="resizeGrid()" /></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div class="editor-tabs flex-shrink-0">
+        <button class="editor-tab active" data-tab="grid" onclick="switchTab('grid')"><span class="material-symbols-outlined" style="font-size:18px">grid_on</span> Mapa</button>
+        <button class="editor-tab" data-tab="config" onclick="switchTab('config')"><span class="material-symbols-outlined" style="font-size:18px">settings</span> Configuracion</button>
+        <button class="editor-tab" data-tab="links" onclick="switchTab('links')"><span class="material-symbols-outlined" style="font-size:18px">link</span> Vinculos</button>
+        <button class="editor-tab" data-tab="code" onclick="switchTab('code')"><span class="material-symbols-outlined" style="font-size:18px">code</span> Codigo</button>
+        <button class="editor-tab" data-tab="import" onclick="switchTab('import')"><span class="material-symbols-outlined" style="font-size:18px">upload_file</span> Importar</button>
+      </div>
+
+      <div id="tab-grid" class="flex-1 overflow-auto p-4 flex items-center justify-center bg-panal"><div id="grid-container" class="grid-canvas"></div></div>
+
+      <div id="tab-config" class="flex-1 overflow-auto p-4" style="display:none">
+        <div style="max-width:600px">
+          <div class="config-group"><label class="config-label">ID del nivel</label><input type="number" id="level-id" class="config-input" value="16" min="1" /></div>
+          <div class="config-group"><label class="config-label">Nombre del nivel</label><input type="text" id="level-name" class="config-input" value="Mi nivel" /></div>
+          <div class="config-group"><label class="config-label">Descripcion</label><textarea id="level-desc" class="config-textarea">Describe el objetivo de este nivel...</textarea></div>
+          <div class="config-group"><label class="config-label">Objetivos (uno por linea)</label><textarea id="level-goals" class="config-textarea">Llegar a la meta</textarea></div>
+          <div class="config-group"><label class="config-label">Pistas (una por linea)</label><textarea id="level-hints" class="config-textarea">Usa avanzar() para moverte.</textarea></div>
+          <div class="flex gap-3">
+            <div class="config-group flex-1"><label class="config-label">Estrellas: Oro (instrucciones)</label><input type="number" id="star-gold" class="config-input" value="10" min="1" /></div>
+            <div class="config-group flex-1"><label class="config-label">Estrellas: Plata</label><input type="number" id="star-silver" class="config-input" value="20" min="1" /></div>
+          </div>
+          <div class="config-group"><label class="config-label">Codigo inicial (starter)</label><textarea id="level-starter" class="config-textarea" style="font-family:monospace;font-size:11px;min-height:100px">Algoritmo Nivel
+    // Escribe tu codigo aqui
+FinAlgoritmo</textarea></div>
+          <div class="config-group"><label class="config-label">Cajas a recoger (0 = todas las del mapa)</label><input type="number" id="level-boxes" class="config-input" value="0" min="0" /></div>
+        </div>
+      </div>
+
+      <!-- NEW LINKS TAB -->
+      <div id="tab-links" class="flex-1 overflow-auto p-4" style="display:none">
+        <div style="max-width:750px">
+          <p class="text-xs text-text-light-muted mb-4">Haz clic en los elementos de abajo para vincularlos. Los interruptores y placas controlan puertas y laseres. Los NPCs reciben items.</p>
+          <div id="links-container"></div>
+        </div>
+      </div>
+
+      <div id="tab-code" class="flex-1 overflow-auto p-4" style="display:none">
+        <div class="flex gap-2 mb-3">
+          <button class="btn btn-primary" onclick="generateCode()"><span class="material-symbols-outlined" style="font-size:16px">refresh</span> Generar</button>
+          <button class="btn btn-outline" onclick="copyCode()"><span class="material-symbols-outlined" style="font-size:16px">content_copy</span> Copiar</button>
+          <button class="btn btn-outline" onclick="downloadCode()"><span class="material-symbols-outlined" style="font-size:16px">download</span> Descargar</button>
+        </div>
+        <pre id="code-output" class="code-output"></pre>
+      </div>
+
+      <div id="tab-import" class="flex-1 overflow-auto p-4" style="display:none">
+        <div style="max-width:600px">
+          <p class="text-xs text-text-light-muted mb-3">Pega el JSON de un nivel para importarlo y editarlo.</p>
+          <textarea id="import-input" class="config-textarea" style="font-family:monospace;font-size:11px;min-height:200px;width:100%" placeholder="Pega aqui el JSON del nivel..."></textarea>
+          <button class="btn btn-primary mt-3" onclick="importLevel()"><span class="material-symbols-outlined" style="font-size:16px">upload_file</span> Importar nivel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Actions -->
+    <aside class="border-l border-border-light bg-background-light flex flex-col p-3 gap-2" style="width:180px;flex-shrink:0">
+      <div class="config-label">Acciones</div>
+      <button class="btn btn-play w-full" onclick="playCustomLevel()" title="Jugar este nivel en el juego">
+        <span class="material-symbols-outlined" style="font-size:16px">sports_esports</span> Jugar nivel
+      </button>
+      <button class="btn btn-primary w-full" onclick="generateCode(); switchTab('code')">
+        <span class="material-symbols-outlined" style="font-size:16px">code</span> Generar codigo
+      </button>
+      <button class="btn btn-outline w-full" onclick="clearGrid()"><span class="material-symbols-outlined" style="font-size:16px">delete_outline</span> Limpiar mapa</button>
+      <button class="btn btn-outline w-full" onclick="saveToStorage()"><span class="material-symbols-outlined" style="font-size:16px">save</span> Guardar local</button>
+      <button class="btn btn-outline w-full" onclick="loadFromStorage()"><span class="material-symbols-outlined" style="font-size:16px">folder_open</span> Cargar guardado</button>
+      <button class="btn btn-outline w-full" onclick="exportJSON()"><span class="material-symbols-outlined" style="font-size:16px">download</span> Exportar JSON</button>
+      <hr class="border-border-light my-2" />
+      <div class="config-label">Vista previa</div>
+      <canvas id="preview-canvas" width="160" height="160" style="border:1px solid #e8e2ce;border-radius:8px;background:#3a3218;width:100%;aspect-ratio:1"></canvas>
+    </aside>
+  </div>
+
+<script>
+// ============================================================
+// LEVEL EDITOR — DevMe (v2 — visual linking + play)
+// ============================================================
+
+const ELEMENTS = [
+  {id:'wall',char:'#',label:'Pared',icon:'block',bg:'#4a3818',fg:'#6b5423',cls:'cell-wall'},
+  {id:'player',char:'P',label:'Jugador',icon:'person',bg:'#e5d9a8',fg:'#e53e3e',cls:'cell-player'},
+  {id:'target',char:'X',label:'Meta',icon:'star',bg:'#e5d9a8',fg:'#f4c025',cls:'cell-target'},
+  {id:'box',char:'B',label:'Caja',icon:'inventory_2',bg:'#e5d9a8',fg:'#a56526',cls:'cell-box'},
+  {id:'switch',char:'S',label:'Interruptor',icon:'toggle_on',bg:'#e5d9a8',fg:'#888',cls:'cell-switch'},
+  {id:'door',char:'D',label:'Puerta',icon:'door_front',bg:'#e5d9a8',fg:'#5b3a1a',cls:'cell-door'},
+  {id:'door_locked',char:'K',label:'P. Bloqueada',icon:'lock',bg:'#e5d9a8',fg:'#8b0000',cls:'cell-door-locked'},
+  {id:'door_protected',char:'Q',label:'P. Protegida',icon:'shield',bg:'#e5d9a8',fg:'#4a0080',cls:'cell-door-protected'},
+  {id:'key',char:'k',label:'Llave',icon:'key',bg:'#e5d9a8',fg:'#ffd700',cls:'cell-key'},
+  {id:'item',char:'i',label:'Item',icon:'diamond',bg:'#e5d9a8',fg:'#4488ff',cls:'cell-item'},
+  {id:'npc',char:'N',label:'NPC',icon:'face',bg:'#e5d9a8',fg:'#4caf50',cls:'cell-npc'},
+  {id:'plate',char:'o',label:'Placa presion',icon:'radio_button_checked',bg:'#e5d9a8',fg:'#777',cls:'cell-plate'},
+  {id:'laser',char:'L',label:'Laser',icon:'flash_on',bg:'#e5d9a8',fg:'#cc0000',cls:'cell-laser'},
+];
+
+let gridW=8, gridH=7, grid=[], currentTool='wall', isMouseDown=false;
+// Link data: arrays of objects per element type found on grid
+let switchLinks=[], plateLinks=[], npcConfigs=[], laserConfigs=[];
+
+// ---- Grid helpers ----
+function findElements(ch){
+  const r=[];
+  for(let y=0;y<gridH;y++) for(let x=0;x<gridW;x++) if(grid[y][x]===ch) r.push({x,y});
+  return r;
+}
+function cellLabel(ch){
+  const el=ELEMENTS.find(e=>e.char===ch);
+  return el?el.label:ch;
+}
+function cellIcon(ch){
+  const el=ELEMENTS.find(e=>e.char===ch);
+  return el?el.icon:'help';
+}
+
+// ---- Init ----
+function init(){ buildPalette(); initGrid(); renderGrid(); updatePreview(); }
+
+function buildPalette(){
+  const pal=document.getElementById('palette'); pal.innerHTML='';
+  ELEMENTS.forEach(el=>{
+    const d=document.createElement('div');
+    d.className='palette-item'+(el.id===currentTool?' active':'');
+    d.dataset.tool=el.id;
+    d.innerHTML=`<div class="palette-icon" style="background:${el.bg};color:${el.fg};border:1px solid rgba(0,0,0,.1)"><span class="material-symbols-outlined" style="font-size:16px">${el.icon}</span></div>${el.label} <span style="margin-left:auto;font-size:10px;opacity:.4">${el.char}</span>`;
+    d.onclick=()=>setTool(el.id);
+    pal.appendChild(d);
+  });
+}
+function setTool(tool){
+  currentTool=tool;
+  document.querySelectorAll('.palette-item').forEach(p=>p.classList.toggle('active',p.dataset.tool===tool));
+}
+function initGrid(){ grid=[]; for(let y=0;y<gridH;y++){grid[y]=[];for(let x=0;x<gridW;x++) grid[y][x]='.';} }
+function resizeGrid(){
+  const nW=Math.min(Math.max(parseInt(document.getElementById('grid-width').value)||8,3),20);
+  const nH=Math.min(Math.max(parseInt(document.getElementById('grid-height').value)||7,3),20);
+  const old=grid.map(r=>[...r]); gridW=nW; gridH=nH; grid=[];
+  for(let y=0;y<gridH;y++){grid[y]=[];for(let x=0;x<gridW;x++) grid[y][x]=(old[y]&&old[y][x])?old[y][x]:'.';}
+  renderGrid(); updatePreview();
+}
+function renderGrid(){
+  const c=document.getElementById('grid-container');
+  c.style.gridTemplateColumns=`repeat(${gridW},48px)`; c.innerHTML='';
+  for(let y=0;y<gridH;y++) for(let x=0;x<gridW;x++){
+    const cell=document.createElement('div');
+    const ch=grid[y][x], el=ELEMENTS.find(e=>e.char===ch)||ELEMENTS[0], isDef=ch==='.';
+    cell.className='grid-cell '+(isDef?'cell-empty':el.cls);
+    cell.textContent=isDef?'':ch;
+    cell.onmousedown=e=>{e.preventDefault();isMouseDown=true;paintCell(x,y)};
+    cell.onmouseenter=()=>{if(isMouseDown)paintCell(x,y)};
+    cell.oncontextmenu=e=>{e.preventDefault();eraseCell(x,y)};
+    cell.title=`(${x}, ${y})`;
+    c.appendChild(cell);
+  }
+}
+document.addEventListener('mouseup',()=>{isMouseDown=false});
+function paintCell(x,y){
+  if(currentTool==='erase'){eraseCell(x,y);return}
+  const el=ELEMENTS.find(e=>e.id===currentTool); if(!el)return;
+  if(el.char==='P'){for(let yy=0;yy<gridH;yy++)for(let xx=0;xx<gridW;xx++)if(grid[yy][xx]==='P')grid[yy][xx]='.';}
+  grid[y][x]=el.char; renderGrid(); updatePreview();
+}
+function eraseCell(x,y){ grid[y][x]='.'; renderGrid(); updatePreview(); }
+function clearGrid(){ if(!confirm('¿Limpiar todo el mapa?'))return; initGrid(); renderGrid(); updatePreview(); }
+
+// ---- Tabs ----
+function switchTab(name){
+  document.querySelectorAll('.editor-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  ['grid','config','links','code','import'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'':'none'});
+  if(name==='code') generateCode();
+  if(name==='links') renderLinksTab();
+}
+
+// ---- Preview ----
+function updatePreview(){
+  const cv=document.getElementById('preview-canvas'), ctx=cv.getContext('2d'), cw=cv.width, ch=cv.height;
+  ctx.fillStyle='#3a3218'; ctx.fillRect(0,0,cw,ch);
+  const cell=Math.min(Math.floor(cw/gridW),Math.floor(ch/gridH));
+  const oX=Math.floor((cw-cell*gridW)/2), oY=Math.floor((ch-cell*gridH)/2);
+  const cm={'#':'#4a3818','P':'#e53e3e','X':'#f4c025','B':'#a56526','S':'#888','D':'#5b3a1a','K':'#8b0000','Q':'#4a0080','k':'#ffd700','i':'#4488ff','N':'#4caf50','o':'#777','L':'#cc0000'};
+  for(let y=0;y<gridH;y++) for(let x=0;x<gridW;x++){
+    const c=grid[y][x];
+    ctx.fillStyle=c==='.'?((x+y)%2===0?'#e5d9a8':'#c9b976'):(cm[c]||'#e5d9a8');
+    ctx.fillRect(oX+x*cell,oY+y*cell,cell,cell);
+    if(c!=='.'&&c!=='#'){ctx.fillStyle='#fff';ctx.font=`bold ${cell*.5}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(c,oX+x*cell+cell/2,oY+y*cell+cell/2+1);}
+  }
+}
+
+// ============================================================
+// VISUAL LINKING SYSTEM
+// ============================================================
+
+function renderLinksTab(){
+  const container=document.getElementById('links-container');
+  container.innerHTML='';
+
+  const switches=findElements('S');
+  const doors=[...findElements('D'),...findElements('Q')]; // normal + protected doors
+  const lasers=findElements('L');
+  const plates=findElements('o');
+  const npcs=findElements('N');
+
+  // Sync link arrays with grid positions
+  syncLinks('switch', switches, switchLinks);
+  syncLinks('plate', plates, plateLinks);
+  syncLinks('npc', npcs, npcConfigs);
+  syncLinks('laser', lasers, laserConfigs);
+
+  // ---- SWITCHES SECTION ----
+  if(switches.length>0){
+    const section=createSection('Interruptores','toggle_on','#888','Cada interruptor puede abrir puertas o desactivar laseres.');
+    switches.forEach((sw,i)=>{
+      const card=createLinkCard('Interruptor',sw,cellIcon('S'),'#f5f3ee','#888');
+      // Targets: doors + lasers
+      const targetsHeader=document.createElement('div');
+      targetsHeader.className='link-section-title';
+      targetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span> Controla (clic para vincular/desvincular):';
+      card.appendChild(targetsHeader);
+
+      const chipsWrap=document.createElement('div');
+      chipsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;';
+
+      // Door chips
+      doors.forEach(d=>{
+        const chip=createTargetChip('D',d,switchLinks[i],'door');
+        chipsWrap.appendChild(chip);
+      });
+      // Laser chips
+      lasers.forEach(l=>{
+        const chip=createTargetChip('L',l,switchLinks[i],'laser');
+        chipsWrap.appendChild(chip);
+      });
+
+      if(doors.length===0&&lasers.length===0){
+        chipsWrap.innerHTML='<span class="empty-hint">No hay puertas ni laseres en el mapa. Colocalos en la pestana Mapa.</span>';
+      }
+      card.appendChild(chipsWrap);
+      section.appendChild(card);
+    });
+    container.appendChild(section);
+  }
+
+  // ---- PLATES SECTION ----
+  if(plates.length>0){
+    const section=createSection('Placas de presion','radio_button_checked','#777','Cada placa se activa al poner una caja encima. Controla puertas.');
+    plates.forEach((pp,i)=>{
+      const card=createLinkCard('Placa',pp,cellIcon('o'),'#f5f3ee','#777');
+
+      // Cajas requeridas
+      const cajasRow=document.createElement('div');
+      cajasRow.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:8px;';
+      cajasRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Cajas necesarias:</span>`;
+      const cajasInput=document.createElement('input');
+      cajasInput.type='number'; cajasInput.min='1'; cajasInput.max='10'; cajasInput.value=plateLinks[i].cajasRequeridas||1;
+      cajasInput.className='config-input'; cajasInput.style.cssText='width:50px;padding:3px 6px;font-size:12px';
+      cajasInput.onchange=function(){plateLinks[i].cajasRequeridas=parseInt(this.value)||1};
+      cajasRow.appendChild(cajasInput);
+      card.appendChild(cajasRow);
+
+      const targetsHeader=document.createElement('div');
+      targetsHeader.className='link-section-title';
+      targetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span> Controla (clic para vincular/desvincular):';
+      card.appendChild(targetsHeader);
+
+      const chipsWrap=document.createElement('div');
+      chipsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;';
+      doors.forEach(d=>{
+        const chip=createTargetChip('D',d,plateLinks[i],'door');
+        chipsWrap.appendChild(chip);
+      });
+      if(doors.length===0){
+        chipsWrap.innerHTML='<span class="empty-hint">No hay puertas en el mapa.</span>';
+      }
+      card.appendChild(chipsWrap);
+      section.appendChild(card);
+    });
+    container.appendChild(section);
+  }
+
+  // ---- NPC SECTION ----
+  if(npcs.length>0){
+    const section=createSection('NPCs','face','#4caf50','Configura que necesita cada NPC para completarse.');
+    npcs.forEach((n,i)=>{
+      const card=createLinkCard('NPC',n,cellIcon('N'),'#f0faf0','#4caf50');
+
+      // Required items
+      const itemsHeader=document.createElement('div');
+      itemsHeader.className='link-section-title';
+      itemsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">inventory</span> Items requeridos (clic para agregar):';
+      card.appendChild(itemsHeader);
+
+      const itemsWrap=document.createElement('div');
+      itemsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;margin-bottom:8px;';
+
+      // Show all items (k, i) on the map as selectable chips
+      const mapItems=[...findElements('k'),...findElements('i')];
+      if(mapItems.length>0){
+        mapItems.forEach(it=>{
+          const ch=grid[it.y][it.x];
+          const isSelected=(npcConfigs[i].requiredItems||[]).some(r=>r===it.x+','+it.y);
+          const chip=document.createElement('span');
+          chip.className='target-chip'+(isSelected?' selected':'');
+          chip.innerHTML=`<span class="chip-icon material-symbols-outlined">${cellIcon(ch)}</span>${cellLabel(ch)} (${it.x},${it.y})`;
+          chip.onclick=()=>{
+            if(!npcConfigs[i].requiredItems) npcConfigs[i].requiredItems=[];
+            const key=it.x+','+it.y;
+            const idx=npcConfigs[i].requiredItems.indexOf(key);
+            if(idx>=0) npcConfigs[i].requiredItems.splice(idx,1);
+            else npcConfigs[i].requiredItems.push(key);
+            renderLinksTab();
+          };
+          itemsWrap.appendChild(chip);
+        });
+      } else {
+        itemsWrap.innerHTML='<span class="empty-hint">No hay items ni llaves en el mapa.</span>';
+      }
+      card.appendChild(itemsWrap);
+
+      // Required boxes
+      const boxesRow=document.createElement('div');
+      boxesRow.style.cssText='display:flex;align-items:center;gap:6px;';
+      boxesRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Cajas requeridas:</span>`;
+      const boxesInput=document.createElement('input');
+      boxesInput.type='number'; boxesInput.min='0'; boxesInput.max='20'; boxesInput.value=npcConfigs[i].requiredBoxes||0;
+      boxesInput.className='config-input'; boxesInput.style.cssText='width:50px;padding:3px 6px;font-size:12px';
+      boxesInput.onchange=function(){npcConfigs[i].requiredBoxes=parseInt(this.value)||0};
+      boxesRow.appendChild(boxesInput);
+      card.appendChild(boxesRow);
+
+      section.appendChild(card);
+    });
+    container.appendChild(section);
+  }
+
+  // ---- LASER SECTION ----
+  if(lasers.length>0){
+    const section=createSection('Laseres','flash_on','#cc0000','Configura la direccion y estado de cada laser.');
+    lasers.forEach((l,i)=>{
+      const card=createLinkCard('Laser',l,cellIcon('L'),'#fff5f5','#cc0000');
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+      row.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Direccion:</span>`;
+      const sel=document.createElement('select');
+      sel.className='config-input'; sel.style.cssText='padding:3px 6px;font-size:12px;width:90px';
+      ['norte','sur','este','oeste'].forEach(d=>{
+        const o=document.createElement('option'); o.value=d; o.textContent=d.charAt(0).toUpperCase()+d.slice(1);
+        if(laserConfigs[i].dir===d) o.selected=true;
+        sel.appendChild(o);
+      });
+      sel.onchange=function(){laserConfigs[i].dir=this.value};
+      row.appendChild(sel);
+
+      const lbl=document.createElement('label');
+      lbl.style.cssText='display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer';
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=laserConfigs[i].active!==false;
+      cb.onchange=function(){laserConfigs[i].active=this.checked};
+      lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' Activo al inicio'));
+      row.appendChild(lbl);
+      card.appendChild(row);
+      section.appendChild(card);
+    });
+    container.appendChild(section);
+  }
+
+  // Empty state
+  if(switches.length===0&&plates.length===0&&npcs.length===0&&lasers.length===0){
+    container.innerHTML=`
+      <div style="text-align:center;padding:40px 20px">
+        <span class="material-symbols-outlined" style="font-size:48px;color:#e8e2ce">link_off</span>
+        <p class="text-sm text-text-light-muted mt-3">No hay elementos vinculables en el mapa.</p>
+        <p class="text-xs text-text-light-muted mt-1">Coloca interruptores (S), placas (o), NPCs (N) o laseres (L) en la pestana Mapa para configurar vinculos.</p>
+      </div>`;
+  }
+}
+
+// Sync link arrays when grid changes (add new, remove deleted)
+function syncLinks(type, positions, linksArr){
+  // Remove entries for positions no longer on grid
+  for(let i=linksArr.length-1;i>=0;i--){
+    if(!positions.some(p=>p.x===linksArr[i].x&&p.y===linksArr[i].y)) linksArr.splice(i,1);
+  }
+  // Add entries for new positions
+  positions.forEach(p=>{
+    if(!linksArr.some(l=>l.x===p.x&&l.y===p.y)){
+      if(type==='switch') linksArr.push({x:p.x,y:p.y,targets:[]});
+      else if(type==='plate') linksArr.push({x:p.x,y:p.y,cajasRequeridas:1,targets:[]});
+      else if(type==='npc') linksArr.push({x:p.x,y:p.y,requiredItems:[],requiredBoxes:0});
+      else if(type==='laser') linksArr.push({x:p.x,y:p.y,dir:'norte',active:true});
+    }
+  });
+}
+
+function createSection(title,icon,color,hint){
+  const div=document.createElement('div');
+  div.style.marginBottom='20px';
+  div.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span class="material-symbols-outlined" style="font-size:20px;color:${color}">${icon}</span>
+      <span style="font-weight:700;font-size:15px">${title}</span>
+    </div>
+    <p class="text-xs text-text-light-muted" style="margin-bottom:10px">${hint}</p>
+  `;
+  return div;
+}
+
+function createLinkCard(label,pos,icon,bg,fg){
+  const card=document.createElement('div');
+  card.className='link-card';
+  const header=document.createElement('div');
+  header.className='link-card-header';
+  header.innerHTML=`<div class="icon-badge" style="background:${bg};color:${fg};border:1px solid ${fg}30"><span class="material-symbols-outlined">${icon}</span></div>${label} <span style="font-weight:400;color:#9c8749;font-size:12px">(${pos.x}, ${pos.y})</span>`;
+  card.appendChild(header);
+  return card;
+}
+
+function createTargetChip(ch,pos,linkData,type){
+  const isSelected=(linkData.targets||[]).some(t=>t.x===pos.x&&t.y===pos.y&&(type==='laser'?t.type==='laser':t.type!=='laser'));
+  const chip=document.createElement('span');
+  chip.className='target-chip'+(isSelected?' selected':'');
+  const icon=cellIcon(ch);
+  const label=cellLabel(ch);
+  chip.innerHTML=`<span class="chip-icon material-symbols-outlined">${icon}</span>${label} (${pos.x},${pos.y})`;
+  chip.onclick=()=>{
+    if(!linkData.targets) linkData.targets=[];
+    const idx=linkData.targets.findIndex(t=>t.x===pos.x&&t.y===pos.y&&((type==='laser'&&t.type==='laser')||(type!=='laser'&&t.type!=='laser')));
+    if(idx>=0){
+      linkData.targets.splice(idx,1);
+    } else {
+      linkData.targets.push({x:pos.x,y:pos.y,type:type});
+    }
+    renderLinksTab();
+  };
+  return chip;
+}
+
+// ============================================================
+// BUILD LEVEL OBJECT (shared by code gen, play, export)
+// ============================================================
+function buildLevelObject(){
+  const id=parseInt(document.getElementById('level-id').value)||16;
+  const name=document.getElementById('level-name').value||'Mi nivel';
+  const desc=document.getElementById('level-desc').value||'';
+  const goals=document.getElementById('level-goals').value.split('\n').filter(Boolean);
+  const hints=document.getElementById('level-hints').value.split('\n').filter(Boolean);
+  const gold=parseInt(document.getElementById('star-gold').value)||10;
+  const silver=parseInt(document.getElementById('star-silver').value)||20;
+  const starter=document.getElementById('level-starter').value||'';
+  const dir=document.getElementById('player-dir').value||'derecha';
+  const boxesToCollect=parseInt(document.getElementById('level-boxes').value)||0;
+
+  const data={
+    id, name, desc, goals, hints,
+    starThresholds:{gold,silver},
+    starter,
+    grid:grid.map(r=>r.join('')),
+    dir
+  };
+
+  const switches=findElements('S');
+  if(switches.length>0) data.switches=switches.map((sw,i)=>{
+    const link=switchLinks.find(l=>l.x===sw.x&&l.y===sw.y)||{targets:[]};
+    return {x:sw.x,y:sw.y,targets:(link.targets||[]).map(t=>{
+      const o={x:t.x,y:t.y}; if(t.type&&t.type!=='door') o.type=t.type; return o;
+    })};
+  });
+
+  const lasers=findElements('L');
+  if(lasers.length>0) data.lasers=lasers.map((l,i)=>{
+    const cfg=laserConfigs.find(c=>c.x===l.x&&c.y===l.y)||{dir:'norte',active:true};
+    return {x:l.x,y:l.y,dir:cfg.dir,active:cfg.active!==false};
+  });
+
+  const plates=findElements('o');
+  if(plates.length>0) data.pressurePlates=plates.map((pp,i)=>{
+    const link=plateLinks.find(l=>l.x===pp.x&&l.y===pp.y)||{cajasRequeridas:1,targets:[]};
+    return {x:pp.x,y:pp.y,cajasRequeridas:link.cajasRequeridas||1,targets:(link.targets||[]).map(t=>({x:t.x,y:t.y}))};
+  });
+
+  const npcs=findElements('N');
+  if(npcs.length>0) data.npcs=npcs.map((n,i)=>{
+    const cfg=npcConfigs.find(c=>c.x===n.x&&c.y===n.y)||{requiredItems:[],requiredBoxes:0};
+    // Convert "x,y" item keys to item types
+    const reqItems=(cfg.requiredItems||[]).map(key=>{
+      const [ix,iy]=key.split(',').map(Number);
+      const ch=grid[iy]&&grid[iy][ix];
+      if(ch==='k') return 'llave';
+      if(ch==='i') return 'item';
+      return 'item';
+    });
+    return {x:n.x,y:n.y,requiredItems:reqItems,requiredBoxes:cfg.requiredBoxes||0,targets:[],acceptsCrates:false};
+  });
+
+  if(boxesToCollect>0&&findElements('B').length>0) data.boxesToCollect=boxesToCollect;
+
+  return data;
+}
+
+// ============================================================
+// PLAY CUSTOM LEVEL
+// ============================================================
+function playCustomLevel(){
+  // Validate: must have a player
+  const players=findElements('P');
+  if(players.length===0){alert('Coloca un jugador (P) en el mapa antes de jugar.');return;}
+  const targets=findElements('X');
+  if(targets.length===0){alert('Coloca al menos una meta (X) en el mapa.');return;}
+
+  const levelData=buildLevelObject();
+  // Save to localStorage — works with file:// protocol, no CORS needed
+  try{
+    localStorage.setItem('devme_custom_level',JSON.stringify(levelData));
+    // Navigate to the game page
+    window.location.href='index.html?custom=1';
+  }catch(e){
+    alert('Error al guardar el nivel: '+e.message);
+  }
+}
+
+// ============================================================
+// CODE GENERATION
+// ============================================================
+function generateCode(){
+  const data=buildLevelObject();
+  let code='  {\n';
+  code+=`    id:${data.id},\n`;
+  code+=`    name:"${data.name}",\n`;
+  code+=`    desc:"${data.desc}",\n`;
+  code+=`    goals:[${data.goals.map(g=>`"${g}"`).join(',')}],\n`;
+  code+=`    hints:[\n${data.hints.map(h=>`      "${h}"`).join(',\n')}\n    ],\n`;
+  code+=`    starThresholds:{ gold: ${data.starThresholds.gold}, silver: ${data.starThresholds.silver} },\n`;
+  code+=`    starter:\n\`${data.starter}\`,\n`;
+  code+=`    grid:[\n${data.grid.map(g=>'      "'+g+'"').join(',\n')}\n    ],\n`;
+  code+=`    dir:'${data.dir}'`;
+  if(data.switches) code+=`,\n    switches:${JSON.stringify(data.switches).replace(/"type":"/g,"type:'").replace(/','/g,"'").replace(/"}/g,"'}")}`;
+  if(data.lasers) code+=`,\n    lasers:${JSON.stringify(data.lasers).replace(/"dir":"/g,"dir:'").replace(/','/g,"'").replace(/"}/g,"'}")}`;
+  if(data.pressurePlates) code+=`,\n    pressurePlates:${JSON.stringify(data.pressurePlates)}`;
+  if(data.npcs) code+=`,\n    npcs:${JSON.stringify(data.npcs).replace(/"requiredItems":\[/g,'requiredItems:[').replace(/"/g,"'")}`;
+  if(data.boxesToCollect) code+=`,\n    boxesToCollect: ${data.boxesToCollect}`;
+  code+='\n  }';
+  document.getElementById('code-output').textContent=code;
+  return code;
+}
+function copyCode(){
+  const code=generateCode();
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(()=>alert('Codigo copiado.'));
+  else { const ta=document.createElement('textarea'); ta.value=code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('Codigo copiado.'); }
+}
+function downloadCode(){
+  const code=generateCode();
+  const blob=new Blob([code],{type:'text/javascript'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`nivel_${document.getElementById('level-id').value||'custom'}.js`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ---- Import ----
+function importLevel(){
+  try{
+    const raw=document.getElementById('import-input').value.trim();
+    const level=eval('('+raw+')');
+    if(!level.grid) throw new Error('Falta la propiedad "grid"');
+    const gridArr=level.grid; gridH=gridArr.length; gridW=gridArr[0].length;
+    grid=gridArr.map(row=>row.split(''));
+    document.getElementById('grid-width').value=gridW;
+    document.getElementById('grid-height').value=gridH;
+    document.getElementById('level-id').value=level.id||16;
+    document.getElementById('level-name').value=level.name||'';
+    document.getElementById('level-desc').value=level.desc||'';
+    document.getElementById('level-goals').value=(level.goals||[]).join('\n');
+    document.getElementById('level-hints').value=(level.hints||[]).join('\n');
+    document.getElementById('player-dir').value=level.dir||'derecha';
+    document.getElementById('level-starter').value=level.starter||'';
+    if(level.starThresholds){document.getElementById('star-gold').value=level.starThresholds.gold||10;document.getElementById('star-silver').value=level.starThresholds.silver||20;}
+    if(level.boxesToCollect) document.getElementById('level-boxes').value=level.boxesToCollect;
+    switchLinks=(level.switches||[]).map(s=>({x:s.x,y:s.y,targets:s.targets||[]}));
+    plateLinks=(level.pressurePlates||[]).map(p=>({x:p.x,y:p.y,cajasRequeridas:p.cajasRequeridas||1,targets:p.targets||[]}));
+    npcConfigs=(level.npcs||[]).map(n=>({x:n.x,y:n.y,requiredItems:n.requiredItems||[],requiredBoxes:n.requiredBoxes||0}));
+    laserConfigs=(level.lasers||[]).map(l=>({x:l.x,y:l.y,dir:l.dir||'norte',active:l.active!==undefined?l.active:true}));
+    renderGrid(); updatePreview(); switchTab('grid');
+    alert('Nivel importado correctamente.');
+  }catch(e){alert('Error al importar: '+e.message);}
+}
+
+// ---- Storage ----
+function saveToStorage(){
+  const data={grid,gridW,gridH,
+    id:document.getElementById('level-id').value,name:document.getElementById('level-name').value,
+    desc:document.getElementById('level-desc').value,goals:document.getElementById('level-goals').value,
+    hints:document.getElementById('level-hints').value,starGold:document.getElementById('star-gold').value,
+    starSilver:document.getElementById('star-silver').value,starter:document.getElementById('level-starter').value,
+    dir:document.getElementById('player-dir').value,boxesToCollect:document.getElementById('level-boxes').value,
+    switchLinks,plateLinks,npcConfigs,laserConfigs};
+  try{localStorage.setItem('devme_level_editor',JSON.stringify(data));alert('Nivel guardado.');}
+  catch(e){alert('Error al guardar: '+e.message);}
+}
+function loadFromStorage(){
+  const raw=localStorage.getItem('devme_level_editor');
+  if(!raw){alert('No hay datos guardados.');return;}
+  try{
+    const d=JSON.parse(raw);
+    grid=d.grid;gridW=d.gridW;gridH=d.gridH;
+    document.getElementById('grid-width').value=gridW;document.getElementById('grid-height').value=gridH;
+    document.getElementById('level-id').value=d.id||16;document.getElementById('level-name').value=d.name||'';
+    document.getElementById('level-desc').value=d.desc||'';document.getElementById('level-goals').value=d.goals||'';
+    document.getElementById('level-hints').value=d.hints||'';document.getElementById('star-gold').value=d.starGold||10;
+    document.getElementById('star-silver').value=d.starSilver||20;document.getElementById('level-starter').value=d.starter||'';
+    document.getElementById('player-dir').value=d.dir||'derecha';document.getElementById('level-boxes').value=d.boxesToCollect||0;
+    switchLinks=d.switchLinks||[];plateLinks=d.plateLinks||[];npcConfigs=d.npcConfigs||[];laserConfigs=d.laserConfigs||[];
+    renderGrid();updatePreview();alert('Nivel cargado.');
+  }catch(e){alert('Error al cargar: '+e.message);}
+}
+function exportJSON(){
+  const data=buildLevelObject();
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`nivel_${data.id}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ---- Start ----
+init();
+</script>
+</body>
+</html>

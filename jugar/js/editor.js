@@ -201,11 +201,6 @@
     const INCREASE_INDENT = /^(algoritmo|subproceso|funcion|si\s+.*\s+entonces|sino|sino\s+si\s+.*\s+entonces|segun\s+.*\s+hacer|mientras\s+.*\s+hacer|repetir|para\s+.*\s+hacer|caso\s+.+:|de\s+otro\s+modo\s*:)\s*$/i;
     const DECREASE_INDENT = /^(finsi|finsegun|finmientras|finpara|finsubproceso|finfuncion|finalgoritmo|sino|sino\s+si|de\s+otro\s+modo|caso\s+.+:|hasta\s+que)\s*$/i;
 
-    function getLineIndent(line) {
-      const match = line.match(/^(\s*)/);
-      return match ? match[1] : '';
-    }
-
     function update() {
       const src = textarea.value;
       const { variables, names } = extractDefinitions(src);
@@ -623,32 +618,6 @@
     function getLineIndent(line) {
       const m = line.match(/^(\s*)/);
       return m ? m[1] : '';
-    }
-
-    function computeIndentForNewLine(prevLine, currentIndent) {
-      // Base: mantener la indentación de la línea anterior
-      let indent = currentIndent;
-      const trimmedPrev = prevLine.trim();
-      // Si la línea anterior aumenta indentación, añadir un nivel
-      if (INCREASE_NEXT.test(trimmedPrev)) {
-        indent = indent + INDENT_UNIT;
-      }
-      return indent;
-    }
-
-    function computeIndentForCurrentLine(lineText, prevLineIndent) {
-      const trimmed = lineText.trim();
-      let indent = prevLineIndent;
-      // Si la línea actual es una palabra de cierre, reducir un nivel
-      if (DECREASE_CURRENT.test(trimmed)) {
-        // Quitar un nivel de indentación
-        if (indent.length >= INDENT_UNIT.length) {
-          indent = indent.substring(INDENT_UNIT.length);
-        } else {
-          indent = '';
-        }
-      }
-      return indent;
     }
 
     // Calcular indentación basada en toda la estructura del código

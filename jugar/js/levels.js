@@ -1,7 +1,11 @@
 /* ============================================================
  * levels.js — Definición de niveles del juego
  * Celdas: '.' vacío, '#' pared, 'B' caja, 'X' meta,
- *         'D' puerta cerrada, 'd' puerta abierta, 'S' switch
+ *         'D' puerta cerrada, 'd' puerta abierta, 'S' switch,
+ *         'K' puerta bloqueada (por señal o por llave),
+ *         'k' llave, 'i' ítem genérico,
+ *         'N' NPC, 'o' placa de presión,
+ *         'L' emisor de láser
  * ============================================================ */
 (function(global){
 'use strict';
@@ -89,8 +93,7 @@ FinAlgoritmo`,
     desc:"Recoge la caja (marrón) y llévala hasta la meta dorada.",
     goals:["Tomar la caja","Llegar a la meta con la caja"],
     hints:[
-      "Avanza hasta estar frente a la caja y usa tomar().",
-      "hayCaja() devuelve Verdadero si hay una caja adelante.",
+      "Avanza hasta estar sobre la caja y usa tomar().",
       "Después de tomarla, avanza hasta la meta y suéltala con soltar()."
     ],
     starThresholds:{ gold: 7, silver: 12 },
@@ -114,8 +117,7 @@ FinAlgoritmo`,
     goals:["Llegar a la meta"],
     hints:[
       "Mientras frenteLibre() Hacer avanzar() FinMientras",
-      "El ciclo se repite mientras haya camino libre al frente.",
-      "Cuando el personaje llegue a la meta, el nivel se completa."
+      "El ciclo se repite mientras haya camino libre al frente."
     ],
     starThresholds:{ gold: 6, silver: 12 },
     starter:
@@ -145,7 +147,6 @@ FinAlgoritmo`,
     starter:
 `Algoritmo Nivel6
     // Llega al interruptor, actívalo, y ve a la meta
-    // Pista: girar(-90) = derecha, girar(90) = izquierda
 
 FinAlgoritmo`,
     grid:[
@@ -162,30 +163,28 @@ FinAlgoritmo`,
   },
   {
     id:7,
-    name:"Varias cajas",
-    desc:"Recoge las 3 cajas y deposítalas en la meta dorada una por una.",
-    goals:["Recoger 3 cajas","Depositarlas en la meta"],
+    name:"La llave maestra",
+    desc:"Recoge la llave (k) y úsala para abrir la puerta bloqueada (K).",
+    goals:["Recoger la llave","Abrir la puerta bloqueada","Llegar a la meta"],
     hints:[
-      "toma una caja, llévala a la meta, suéltala. Repite.",
-      "Un SubProceso llevarCaja() te ayudaría a no repetir código.",
-      "soltar() sobre la meta dorada cuenta como entrega."
+      "Recoge la llave con tomar() cuando estés sobre ella.",
+      "llevoLlave() devuelve Verdadero si tienes una llave.",
+      "abrir() frente a una puerta bloqueada consume la llave."
     ],
-    starThresholds:{ gold: 22, silver: 35 },
+    starThresholds:{ gold: 8, silver: 14 },
     starter:
 `Algoritmo Nivel7
-    // Recoge las 3 cajas y llévalas a la meta
+    // Recoge la llave y abre la puerta bloqueada
 
 FinAlgoritmo`,
     grid:[
-      "#########",
-      "#P.B.B.B#",
-      "#.......#",
-      "#.......#",
-      "#......X#",
-      "#########"
+      "########",
+      "#P.k..K#",
+      "#......#",
+      "#.....X#",
+      "########"
     ],
-    dir:'derecha',
-    boxesToCollect: 3
+    dir:'derecha'
   },
   {
     id:8,
@@ -194,13 +193,11 @@ FinAlgoritmo`,
     goals:["Llegar a la meta"],
     hints:[
       "SubProceso avanzar3() ... FinSubProceso",
-      "Luego llama avanzar3() desde el algoritmo principal.",
-      "Puedes definir parámetros: SubProceso avanzarN(n)"
+      "Luego llama avanzar3() desde el algoritmo principal."
     ],
     starThresholds:{ gold: 6, silver: 10 },
     starter:
 `Algoritmo Nivel8
-    // Define un SubProceso y úsalo para llegar a la meta
     avanzar3()
     girar(-90)
     avanzar3()
@@ -222,19 +219,132 @@ FinSubProceso`,
   },
   {
     id:9,
+    name:"Varias cajas",
+    desc:"Recoge las 3 cajas y deposítalas en la meta dorada una por una.",
+    goals:["Recoger 3 cajas","Depositarlas en la meta"],
+    hints:[
+      "toma una caja, llévala a la meta, suéltala. Repite.",
+      "soltar() sobre la meta dorada cuenta como entrega."
+    ],
+    starThresholds:{ gold: 22, silver: 35 },
+    starter:
+`Algoritmo Nivel9
+    // Recoge las 3 cajas y llévalas a la meta
+
+FinAlgoritmo`,
+    grid:[
+      "#########",
+      "#P.B.B.B#",
+      "#.......#",
+      "#.......#",
+      "#......X#",
+      "#########"
+    ],
+    dir:'derecha',
+    boxesToCollect: 3
+  },
+  {
+    id:10,
+    name:"Entrega al NPC",
+    desc:"Recoge el ítem (i) y entrégalo al NPC (N).",
+    goals:["Recoger el ítem","Entregarlo al NPC","Llegar a la meta"],
+    hints:[
+      "Recoge el ítem con tomar().",
+      "Colócate adyacente al NPC mirando hacia él.",
+      "Usa entregar() para dar el ítem al NPC."
+    ],
+    starThresholds:{ gold: 10, silver: 18 },
+    starter:
+`Algoritmo Nivel10
+    // Recoge el ítem y entrégalo al NPC
+
+FinAlgoritmo`,
+    grid:[
+      "#######",
+      "#P.i..#",
+      "#.....#",
+      "#..N..#",
+      "#.....#",
+      "#....X#",
+      "#######"
+    ],
+    npcs:[
+      { x:3, y:3, requiredItems:['item'], requiredBoxes:0, targets:[], acceptsCrates:false }
+    ],
+    dir:'derecha'
+  },
+  {
+    id:11,
+    name:"Placa de presión",
+    desc:"Empuja la caja sobre la placa de presión (o) para abrir la puerta bloqueada.",
+    goals:["Activar la placa de presión","Llegar a la meta"],
+    hints:[
+      "Empuja la caja hasta la placa de presión.",
+      "La placa se activa cuando tiene una caja encima.",
+      "La placa abre la puerta bloqueada (K) vinculada."
+    ],
+    starThresholds:{ gold: 14, silver: 24 },
+    starter:
+`Algoritmo Nivel11
+    // Empuja la caja a la placa de presión
+
+FinAlgoritmo`,
+    grid:[
+      "########",
+      "#P....B#",
+      "#......#",
+      "#..o..K#",
+      "#......#",
+      "#.....X#",
+      "########"
+    ],
+    pressurePlates:[
+      { x:3, y:3, cajasRequeridas:1, targets:[{x:6,y:3}] }
+    ],
+    dir:'derecha'
+  },
+  {
+    id:12,
+    name:"Cuidado con el láser",
+    desc:"Evita los haces de láser o desactívalos con el interruptor.",
+    goals:["Desactivar el láser","Llegar a la meta"],
+    hints:[
+      "El emisor de láser (L) proyecta un haz que mata.",
+      "Activa el interruptor para desactivar el láser.",
+      "El láser se detiene ante paredes y cajas."
+    ],
+    starThresholds:{ gold: 16, silver: 28 },
+    starter:
+`Algoritmo Nivel12
+    // Desactiva el láser y llega a la meta
+
+FinAlgoritmo`,
+    grid:[
+      "########",
+      "#P....X#",
+      "#......#",
+      "#.S..L.#",
+      "#......#",
+      "#......#",
+      "########"
+    ],
+    switches:[ { x:2, y:3, targets:[{x:5,y:3, type:'laser'}] } ],
+    lasers:[ { x:5, y:3, dir:'norte', active:true } ],
+    dir:'derecha'
+  },
+  {
+    id:13,
     name:"Laberinto",
     desc:"Encuentra tu camino hacia la meta dentro del laberinto.",
     goals:["Llegar a la meta"],
     hints:[
-      "Algoritmo mano-derecha: si puedes girar a la derecha, gira y avanza; si no, avanza recto; si no, gira a la izquierda.",
-      "girar(-90) es derecha, girar(90) es izquierda.",
-      "Mientras NO objetivoCompleto() Hacer ... FinMientras"
+      "Algoritmo mano-derecha: si puedes girar a la derecha, gira y avanza.",
+      "girar(-90) es derecha, girar(90) es izquierda."
     ],
     starThresholds:{ gold: 30, silver: 60 },
     starter:
-`Algoritmo Nivel9
+`Algoritmo Nivel13
     Mientras NO objetivoCompleto() Hacer
-        // Implementa el algoritmo de mano derecha
         Si frenteLibre() Entonces
             avanzar()
         Sino
@@ -245,8 +355,8 @@ FinAlgoritmo`,
     grid:[
       "#########",
       "#.P#....#",
-	  "#..#.##.#",
-	  "#..#.##.#",
+      "#..#.##.#",
+      "#..#.##.#",
       "#..#.##.#",
       "#..#.#..#",
       "#.##.#.##",
@@ -256,18 +366,17 @@ FinAlgoritmo`,
     dir:'derecha'
   },
   {
-    id:10,
+    id:14,
     name:"Automatización total",
     desc:"Recoge todas las cajas del laberinto y llévalas de una en una a la meta.",
     goals:["Depositar todas las cajas en la meta"],
     hints:[
       "Usa un SubProceso para llevar una caja a la meta.",
-      "Repite hasta que no queden cajas por recoger.",
-      "Mientras hayCaja() o hay cajas sin recoger..."
+      "Repite hasta que no queden cajas por recoger."
     ],
     starThresholds:{ gold: 28, silver: 45 },
     starter:
-`Algoritmo Nivel10
+`Algoritmo Nivel14
     // Recoge todas las cajas y llévalas a la meta
 
 FinAlgoritmo`,
@@ -282,6 +391,62 @@ FinAlgoritmo`,
     ],
     dir:'derecha',
     boxesToCollect: 2
+  },
+  {
+    id:15,
+    name:"El desafio final",
+    desc:"Un nivel que combina todos los elementos: llaves, puertas bloqueadas, items, NPCs, interruptores, laseres, cajas y placas de presion. Demuestra que dominas todo.",
+    goals:[
+      "Recoger la llave",
+      "Abrir la puerta bloqueada",
+      "Recoger el item",
+      "Entregarlo al NPC",
+      "Activar el interruptor (desactivar laser)",
+      "Empujar la caja a la placa de presion",
+      "Llegar a la meta"
+    ],
+    hints:[
+      "Recoge la llave (k) y usala para abrir la puerta bloqueada (K).",
+      "Recoge el item (i) y entregalo al NPC (N) colocandote enfrente y mirando hacia el.",
+      "Activa el interruptor (S) para desactivar el laser (L).",
+      "Empuja la caja (B) hacia abajo hasta la placa de presion (o).",
+      "La placa abre la puerta bloqueada (K) vinculada. Luego llega a la meta (X)."
+    ],
+    starThresholds:{ gold: 40, silver: 60 },
+    starter:
+`Algoritmo Nivel15
+    // El desafio final: combina todos los elementos
+    // 1. Recoge la llave y abre la puerta bloqueada
+    // 2. Recoge el item y entregalo al NPC
+    // 3. Activa el interruptor para el laser
+    // 4. Empuja la caja a la placa de presion
+    // 5. Llega a la meta
+
+FinAlgoritmo`,
+    grid:[
+      "##########",
+      "#P.k.....#",
+      "#........#",
+      "#..K..S..#",
+      "#........#",
+      "#..B.i.N.#",
+      "#..o...K.#",
+      "#.......X#",
+      "##########"
+    ],
+    switches:[
+      { x:6, y:3, targets:[{x:8,y:2, type:'laser'}] }
+    ],
+    lasers:[
+      { x:8, y:2, dir:'este', active:true }
+    ],
+    pressurePlates:[
+      { x:3, y:6, cajasRequeridas:1, targets:[{x:7,y:6}] }
+    ],
+    npcs:[
+      { x:7, y:5, requiredItems:['item'], requiredBoxes:0, targets:[{x:7,y:6}], acceptsCrates:false }
+    ],
+    dir:'derecha'
   }
 ];
 
@@ -295,6 +460,10 @@ function buildLevel(def){
   const targets = [];
   const switches = [];
   const doors = [];
+  const items = [];
+  const npcs = [];
+  const pressurePlates = [];
+  const lasers = [];
 
   for(let y=0; y<H; y++){
     for(let x=0; x<W; x++){
@@ -304,15 +473,53 @@ function buildLevel(def){
       else if(c === 'B'){ boxes.push({x,y}); grid[y][x]='.'; }
       else if(c === 'X'){ targets.push({x,y}); grid[y][x]='.'; }
       else if(c === 'S'){ switches.push({x,y, active:false, targets:[]}); grid[y][x]='.'; }
-      else if(c === 'D'){ doors.push({x,y, open:false}); grid[y][x]='.'; }
-      else if(c === 'd'){ doors.push({x,y, open:true}); grid[y][x]='.'; }
+      else if(c === 'D'){ doors.push({x,y, open:false, locked:false, protected:false}); grid[y][x]='.'; }
+      else if(c === 'd'){ doors.push({x,y, open:true, locked:false, protected:false}); grid[y][x]='.'; }
+      else if(c === 'K'){ doors.push({x,y, open:false, locked:true, protected:false}); grid[y][x]='.'; }
+      else if(c === 'k'){ items.push({x,y, type:'llave', id:'llave_'+x+'_'+y}); grid[y][x]='.'; }
+      else if(c === 'i'){ items.push({x,y, type:'item', id:'item_'+x+'_'+y}); grid[y][x]='.'; }
+      else if(c === 'N'){ npcs.push({x,y, requiredItems:[], requiredBoxes:0, targets:[], acceptsCrates:false, received:{items:[], boxes:0}, completed:false}); grid[y][x]='.'; }
+      else if(c === 'o'){ pressurePlates.push({x,y, cajasRequeridas:1, active:false, targets:[]}); grid[y][x]='.'; }
+      else if(c === 'L'){ lasers.push({x,y, dir:'este', active:true, targets:[]}); grid[y][x]='.'; }
     }
   }
 
-  // Asociar los targets de cada switch (definidos en def.switches)
+  // Asociar los targets de cada switch
   if(def.switches){
     def.switches.forEach((s, i) => {
       if(switches[i] && s.targets) switches[i].targets = s.targets;
+    });
+  }
+
+  // Asociar NPCs definidos en def.npcs
+  if(def.npcs){
+    def.npcs.forEach((n, i) => {
+      if(npcs[i]){
+        npcs[i].requiredItems = n.requiredItems || [];
+        npcs[i].requiredBoxes = n.requiredBoxes || 0;
+        npcs[i].targets = n.targets || [];
+        npcs[i].acceptsCrates = n.acceptsCrates || false;
+      }
+    });
+  }
+
+  // Asociar placas de presión
+  if(def.pressurePlates){
+    def.pressurePlates.forEach((pp, i) => {
+      if(pressurePlates[i]){
+        pressurePlates[i].cajasRequeridas = pp.cajasRequeridas || 1;
+        pressurePlates[i].targets = pp.targets || [];
+      }
+    });
+  }
+
+  // Asociar láseres
+  if(def.lasers){
+    def.lasers.forEach((l, i) => {
+      if(lasers[i]){
+        lasers[i].dir = l.dir || 'este';
+        lasers[i].active = l.active !== undefined ? l.active : true;
+      }
     });
   }
 
@@ -325,13 +532,24 @@ function buildLevel(def){
     targets,
     switches,
     doors,
+    items,
+    npcs,
+    pressurePlates,
+    lasers,
+    laserBeams: [],
+    inventory: [],
     delivered: 0,
     boxesToCollect: def.boxesToCollect || boxes.length,
     deliveredAt: []
   };
 }
 
+function cloneWorld(world){
+  return JSON.parse(JSON.stringify(world));
+}
+
 global.LEVELS = LEVELS;
 global.buildLevel = buildLevel;
+global.cloneWorld = cloneWorld;
 
 })(window);

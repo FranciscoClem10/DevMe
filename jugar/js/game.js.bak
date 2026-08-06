@@ -20,6 +20,7 @@ let controller = null;
 const renderer = makeRenderer(gameCanvas);
 let highlightLine = -1;
 let userCodeBackup = null;
+let isCustomMode = false; // true when playing a custom level from the editor
 
 function tradError(msg){
   const map = {
@@ -51,7 +52,10 @@ function tradError(msg){
 // -------------- Carga de niveles --------------
 function loadLevel(idx, isReset){
   currentLevelIdx = idx;
+  isCustomMode = false;
   localStorage.setItem('cq_level', String(idx));
+  // Clear custom level when loading a normal level
+  localStorage.removeItem('devme_custom_level');
   const def = LEVELS[idx];
   world = buildLevel(def);
   initialWorld = cloneWorld(world);
@@ -371,7 +375,12 @@ function togglePauseGame(){
 function resetGame(){
   if(controller) controller.abort();
   if(window.__gameState && window.__gameState.paused) window.__gameState.resume();
-  loadLevel(currentLevelIdx, true);
+  if(isCustomMode){
+    // Reload custom level
+    loadCustomLevel();
+  } else {
+    loadLevel(currentLevelIdx, true);
+  }
 }
 
 function onGameWin(n){
@@ -382,9 +391,12 @@ function onGameWin(n){
   let stars = 1;
   if(n <= gold) stars = 3;
   else if(n <= silver) stars = 2;
-  const prog = JSON.parse(localStorage.getItem('cq_progress')||'{}');
-  prog[def.id] = Math.max(stars, prog[def.id]||0);
-  localStorage.setItem('cq_progress', JSON.stringify(prog));
+  // Only save progress for official levels, not custom ones
+  if(!isCustomMode){
+    const prog = JSON.parse(localStorage.getItem('cq_progress')||'{}');
+    prog[def.id] = Math.max(stars, prog[def.id]||0);
+    localStorage.setItem('cq_progress', JSON.stringify(prog));
+  }
   $('game-win-stats').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;padding:0.75rem 1rem;background:#f5f3ee;border-radius:0.5rem;">
       <div style="font-size:1.5rem;font-weight:700;color:#f4c025;">${n}</div>
@@ -454,47 +466,75 @@ window.openLevelSelector = openLevelSelector;
 $('game-win-retry').addEventListener('click', ()=>{ $('game-win-modal').style.display='none'; loadLevel(currentLevelIdx); });
 $('game-win-next').addEventListener('click', ()=>{
   $('game-win-modal').style.display='none';
-  const next = currentLevelIdx+1;
-  if(next<LEVELS.length) loadLevel(next);
-  else { renderLevelsGrid(); $('game-levels-modal').style.display='flex'; }
+  if(isCustomMode){
+    // In custom mode, go back to level selector
+    isCustomMode = false;
+    localStorage.removeItem('devme_custom_level');
+    renderLevelsGrid();
+    $('game-levels-modal').style.display='flex';
+  } else {
+    const next = currentLevelIdx+1;
+    if(next<LEVELS.length) loadLevel(next);
+    else { renderLevelsGrid(); $('game-levels-modal').style.display='flex'; }
+  }
 });
 gameSpeed.addEventListener('input', ()=>{
   const inverted = 850 - parseInt(gameSpeed.value, 10);
   gameSpeedLbl.textContent=inverted+'ms';
 });
 
-// -------------- Inicio --------------
-// Check for custom level from editor
-(function loadCustomLevel(){
-  const params = new URLSearchParams(window.location.search);
-  if(params.get('custom')!=='1') return false;
+// -------------- Custom Level Support --------------
+function loadCustomLevel(){
+  const raw = localStorage.getItem('devme_custom_level');
+  if(!raw) return false;
   try{
-    const raw = localStorage.getItem('devme_custom_level');
-    if(!raw) return false;
-    const data = JSON.parse(raw);
-    // Add as a temporary level at the end
-    data.id = data.id || 999;
-    data.name = data.name || 'Nivel Personalizado';
-    data.desc = data.desc || 'Nivel creado en el editor';
-    data.goals = data.goals || ['Llegar a la meta'];
-    data.hints = data.hints || [];
-    data.starThresholds = data.starThresholds || {gold:10, silver:20};
-    data.starter = data.starter || 'Algoritmo Nivel\n    // Escribe tu codigo aqui\nFinAlgoritmo';
-    LEVELS.push(data);
-    currentLevelIdx = LEVELS.length - 1;
-    loadLevel(currentLevelIdx);
-    // Switch to game tab
-    const gameTab = document.querySelector('[data-main-tab="game"]');
-    if(gameTab) gameTab.click();
-    window.__customLevelLoaded = true;
+    const def = JSON.parse(raw);
+    if(!def.grid || !def.grid.length) return false;
+    if(!def.goals || !def.goals.length) def.goals = ['Llegar a la meta'];
+    if(!def.hints) def.hints = [];
+    if(!def.starThresholds) def.starThresholds = {gold:999, silver:999};
+    if(!def.id) def.id = 999;
+    if(!def.name) def.name = 'Nivel personalizado';
+    if(!def.dir) def.dir = 'derecha';
+
+    isCustomMode = true;
+    world = buildLevel(def);
+    initialWorld = cloneWorld(world);
+    highlightLine = -1;
+
+    $('game-level-title').textContent = def.name;
+    $('game-level-label').textContent = 'Custom';
+    $('game-desc').textContent = def.desc || '';
+    const levelNameTab = $('game-level-name-tab');
+    if(levelNameTab) levelNameTab.textContent = def.name;
+    renderGoals();
+    renderHints();
+    updateStarsDisplay();
+    renderer.setWorld(world);
+    setGameStatus('idle','Listo');
+    updateInstrCount(0);
+    hideGameOverlay();
+
+    if(def.starter && typeof window.loadStarterCode === 'function'){
+      window.loadStarterCode(def.starter);
+    }
     return true;
   }catch(e){
-    console.error('Error loading custom level:', e);
+    console.warn('Error loading custom level:', e);
     return false;
   }
-})();
-// Only load default level if no custom level was loaded
-if(!window.__customLevelLoaded){
+}
+
+function clearCustomLevel(){
+  localStorage.removeItem('devme_custom_level');
+}
+
+window.clearCustomLevel = clearCustomLevel;
+
+// -------------- Inicio --------------
+// Check if we're loading a custom level from the editor
+const isCustomLevel = loadCustomLevel();
+if(!isCustomLevel){
   loadLevel(currentLevelIdx);
 }
 gameSpeedLbl.textContent = (850 - parseInt(gameSpeed.value,10))+'ms';

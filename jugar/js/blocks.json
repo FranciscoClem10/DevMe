@@ -221,6 +221,12 @@
         "angle": { "label": "Angulo", "default": "90" }
       }
     },
+    "game_empujar": {
+      "category": "game",
+      "label": "Empujar Caja",
+      "icon": "pan_tool",
+      "fields": {}
+    },
     "game_mover": {
       "category": "game",
       "label": "Mover",
@@ -346,6 +352,63 @@
       "label": "Direccion Jugador",
       "icon": "explore",
       "fields": {}
+    },
+    "game_entregar": {
+      "category": "game",
+      "label": "Entregar a NPC",
+      "icon": "volunteer_activism",
+      "fields": {}
+    },
+    "game_hablar": {
+      "category": "game",
+      "label": "Hablar con NPC",
+      "icon": "chat",
+      "fields": {}
+    },
+    "game_hayitem": {
+      "category": "game_query",
+      "label": "Hay Item",
+      "icon": "inventory",
+      "fields": {}
+    },
+    "game_haynpc": {
+      "category": "game_query",
+      "label": "Hay NPC",
+      "icon": "person",
+      "fields": {}
+    },
+    "game_puertabloqueada": {
+      "category": "game_query",
+      "label": "Puerta Bloqueada",
+      "icon": "lock",
+      "fields": {}
+    },
+    "game_puertaprotegida": {
+      "category": "game_query",
+      "label": "Puerta Protegida",
+      "icon": "shield",
+      "fields": {}
+    },
+    "game_llevollave": {
+      "category": "game_query",
+      "label": "Lleva Llave",
+      "icon": "key",
+      "fields": {}
+    },
+    "game_llevocaja": {
+      "category": "game_query",
+      "label": "Lleva Caja",
+      "icon": "inventory_2",
+      "fields": {}
+    },
+    "game_hayitemen": {
+      "category": "game_query",
+      "label": "Hay Item En",
+      "icon": "location_on",
+      "fields": {
+        "x": { "label": "X", "default": "0" },
+        "y": { "label": "Y", "default": "0" }
+      }
     },
     "comentario": {
       "category": "comment",

@@ -10,11 +10,14 @@
 
   // Funciones built-in del juego que el analizador semántico debe reconocer
   const GAME_BUILTIN_FNS = new Set([
-    'avanzar','mover','girar','tomar','soltar','activar','desactivar',
-    'abrir','cerrar','usar','esperar','decir',
-    'frentelibre','hayobjeto','haycaja','haypuerta','puertaabierta',
-    'hayenemigo','hayswitch','inventariolleno','llevoobjeto','objetivocompleto',
-    'posicionx','posiciony','direccionj','cajasentregadas','cajasrestantes','haycajaen',
+    'avanzar','mover','girar','empujar','tomar','soltar','activar','desactivar',
+    'abrir','cerrar','usar','esperar','decir','entregar','hablar',
+    'frentelibre','hayobjeto','haycaja','hayitem','haypuerta','puertaabierta',
+    'puertabloqueada','puertaprotegida',
+    'hayenemigo','hayswitch','haynpc',
+    'inventariolleno','llevoobjeto','llevocaja','llevollave','objetivocompleto',
+    'posicionx','posiciony','direccionj','cajasentregadas','cajasrestantes',
+    'haycajaen','hayitemen',
     'azar','abs','raiz'
   ]);
 
@@ -112,9 +115,11 @@
             for (const a of node.args) typeOfExpr(a, scope, false);
             // Las consultas del juego devuelven logico o entero
             const n = normalizeName(node.name);
-            if (['frentelibre','hayobjeto','haycaja','haypuerta','puertaabierta',
-                 'hayenemigo','hayswitch','inventariolleno','llevoobjeto','objetivocompleto',
-                 'haycajaen'].includes(n)) return 'logico';
+            if (['frentelibre','hayobjeto','haycaja','hayitem','haypuerta','puertaabierta',
+                 'puertabloqueada','puertaprotegida',
+                 'hayenemigo','hayswitch','haynpc',
+                 'inventariolleno','llevoobjeto','llevocaja','llevollave','objetivocompleto',
+                 'haycajaen','hayitemen'].includes(n)) return 'logico';
             if (['posicionx','posiciony','cajasentregadas','cajasrestantes',
                  'azar','abs','raiz'].includes(n)) return 'entero';
             if (n === 'direccionj') return 'caracter';

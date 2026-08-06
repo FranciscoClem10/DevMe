@@ -1,6 +1,9 @@
 /* ============================================================
  * renderer.js — Dibuja el mundo del juego en el canvas
- * Soporta imágenes opcionales con fallback a CSS/Canvas
+ * Soporta imágenes opcionales con fallback a Canvas
+ * Dibuja: paredes, metas, puertas (cerrada/bloqueada),
+ * interruptores, cajas, llaves, ítems, NPCs, placas de presión,
+ * láseres, haces de láser, jugador con inventario.
  * ============================================================ */
 (function(global){
 'use strict';
@@ -11,26 +14,22 @@ const COLORS = {
   target:'rgba(244,192,37,0.5)', targetBorder:'#f4c025',
   box:'#a56526', boxLight:'#c07f39',
   door:'#5b3a1a', doorOpen:'#a08065',
+  doorLocked:'#8b0000',
   switchOff:'#888', switchOn:'#22863a',
-  player:'#e53e3e', playerDir:'#fff'
+  player:'#e53e3e', playerDir:'#fff',
+  key:'#ffd700', item:'#4488ff',
+  npc:'#4caf50', npcDone:'#81c784',
+  plateOff:'#777', plateOn:'#ff9800',
+  laser:'#ff0000', laserBeam:'rgba(255,0,0,0.5)',
+  laserEmitter:'#cc0000'
 };
 
-// Sistema de carga de imágenes con fallback
 const IMAGES = {
-  player: null,
-  player_up: null,
-  player_down: null,
-  player_left: null,
-  player_right: null,
-  wall: null,
-  target: null,
-  box: null,
-  box_delivered: null,
-  door: null,
-  door_open: null,
-  switch_off: null,
-  switch_on: null,
-  carrying_box: null
+  player: null, player_up: null, player_down: null,
+  player_left: null, player_right: null,
+  wall: null, target: null, box: null,
+  box_delivered: null, door: null, door_open: null,
+  switch_off: null, switch_on: null, carrying_box: null
 };
 
 let imagesLoaded = false;
@@ -39,51 +38,29 @@ let imagesChecked = false;
 function loadImages() {
   if (imagesChecked) return;
   imagesChecked = true;
-
   const imgDir = 'imgs/';
   const imgFiles = {
-    player: 'player.png',
-    player_up: 'player_up.png',
-    player_down: 'player_down.png',
-    player_left: 'player_left.png',
-    player_right: 'player_right.png',
-    wall: 'wall.png',
-    target: 'target.png',
-    box: 'box.png',
-    box_delivered: 'box_delivered.png',
-    door: 'door.png',
-    door_open: 'door_open.png',
-    switch_off: 'switch_off.png',
-    switch_on: 'switch_on.png',
-    carrying_box: 'carrying_box.png'
+    player: 'player.png', player_up: 'player_up.png',
+    player_down: 'player_down.png', player_left: 'player_left.png',
+    player_right: 'player_right.png', wall: 'wall.png',
+    target: 'target.png', box: 'box.png',
+    box_delivered: 'box_delivered.png', door: 'door.png',
+    door_open: 'door_open.png', switch_off: 'switch_off.png',
+    switch_on: 'switch_on.png', carrying_box: 'carrying_box.png'
   };
-
   let loadedCount = 0;
   const totalImages = Object.keys(imgFiles).length;
-
   const onLoad = (key) => {
     loadedCount++;
     if (loadedCount === totalImages) {
       imagesLoaded = true;
-      console.log('✓ Todas las imágenes cargadas correctamente');
-      // Forzar un redibujado del canvas una vez que todas las imágenes estén listas
-      if (window.__renderer) {
-        // Pequeño retraso para asegurar que el DOM esté actualizado
-        setTimeout(() => window.__renderer.render(), 50);
-      }
+      if (window.__renderer) setTimeout(() => window.__renderer.render(), 50);
     }
   };
-
   for (const [key, filename] of Object.entries(imgFiles)) {
     const img = new Image();
-    img.onload = () => {
-      IMAGES[key] = img;
-      onLoad(key);
-    };
-    img.onerror = () => {
-      console.log(`⚠ Imagen no encontrada: ${filename} (usando fallback CSS)`);
-      onLoad(key);
-    };
+    img.onload = () => { IMAGES[key] = img; onLoad(key); };
+    img.onerror = () => { onLoad(key); };
     img.src = imgDir + filename;
   }
 }
@@ -95,14 +72,9 @@ function makeRenderer(canvas){
   let sayMsg = null;
   let sayTimer = 0;
 
-  // Cargar imágenes al inicio
   loadImages();
 
-  function setWorld(w){
-    world = w;
-    resize();
-    render();
-  }
+  function setWorld(w){ world = w; resize(); render(); }
 
   function resize(){
     const parent = canvas.parentElement;
@@ -110,9 +82,7 @@ function makeRenderer(canvas){
     const size = Math.min(parent.clientWidth, parent.clientHeight) - 20;
     const s = Math.max(280, Math.min(640, size));
     canvas.width = s; canvas.height = s;
-    if(world){
-      cell = Math.floor(Math.min(s/world.W, s/world.H));
-    }
+    if(world){ cell = Math.floor(Math.min(s/world.W, s/world.H)); }
   }
 
   function render(){
@@ -153,7 +123,7 @@ function makeRenderer(canvas){
         ctx.fillStyle = COLORS.targetBorder;
         ctx.font = `${cell*0.45}px serif`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('★', px+cell/2, py+cell/2);
+        ctx.fillText('\u2605', px+cell/2, py+cell/2);
       }
     }
 
@@ -170,6 +140,31 @@ function makeRenderer(canvas){
         ctx.strokeStyle = '#2a1e0a';
         ctx.lineWidth = 1;
         ctx.strokeRect(px+0.5, py+0.5, cell-1, cell-1);
+      }
+    }
+
+    // placas de presión
+    if(world.pressurePlates){
+      for(const pp of world.pressurePlates){
+        const px = offX+pp.x*cell, py = offY+pp.y*cell;
+        const cx = px+cell/2, cy = py+cell/2;
+        const r = cell*0.35;
+        // Anillo exterior
+        ctx.strokeStyle = pp.active ? COLORS.plateOn : COLORS.plateOff;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+        // Anillo interior
+        ctx.strokeStyle = pp.active ? '#ffb74d' : '#999';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, cy, r*0.6, 0, Math.PI*2); ctx.stroke();
+        // Centro
+        ctx.fillStyle = pp.active ? COLORS.plateOn : '#666';
+        ctx.beginPath(); ctx.arc(cx, cy, r*0.25, 0, Math.PI*2); ctx.fill();
+        // Texto
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${cell*0.18}px sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('o', cx, cy+1);
       }
     }
 
@@ -196,13 +191,25 @@ function makeRenderer(canvas){
     for(const d of world.doors){
       const px = offX+d.x*cell, py = offY+d.y*cell;
       const img = d.open ? IMAGES.door_open : IMAGES.door;
-      if(img){
+      if(img && !d.locked){
         ctx.drawImage(img, px, py, cell, cell);
       } else {
         if(d.open){
           ctx.fillStyle = COLORS.doorOpen;
           ctx.fillRect(px+cell*0.1, py+cell*0.1, cell*0.15, cell*0.8);
           ctx.fillRect(px+cell*0.75, py+cell*0.1, cell*0.15, cell*0.8);
+        } else if(d.locked){
+          // Puerta bloqueada - roja con candado
+          ctx.fillStyle = COLORS.doorLocked;
+          ctx.fillRect(px+cell*0.05, py+cell*0.05, cell*0.9, cell*0.9);
+          ctx.fillStyle = '#5a0000';
+          ctx.fillRect(px+cell*0.15, py+cell*0.15, cell*0.7, cell*0.7);
+          // Candado
+          ctx.fillStyle = '#ffd700';
+          ctx.beginPath(); ctx.arc(px+cell*0.5, py+cell*0.4, cell*0.12, Math.PI, 0); ctx.stroke();
+          ctx.fillRect(px+cell*0.38, py+cell*0.4, cell*0.24, cell*0.2);
+          ctx.fillStyle = '#3a0000';
+          ctx.beginPath(); ctx.arc(px+cell*0.5, py+cell*0.5, cell*0.04, 0, Math.PI*2); ctx.fill();
         } else {
           ctx.fillStyle = COLORS.door;
           ctx.fillRect(px+cell*0.05, py+cell*0.05, cell*0.9, cell*0.9);
@@ -214,6 +221,155 @@ function makeRenderer(canvas){
       }
     }
 
+    // items en el suelo (llaves e ítems)
+    if(world.items){
+      for(const it of world.items){
+        const px = offX+it.x*cell, py = offY+it.y*cell;
+        const cx = px+cell/2, cy = py+cell/2;
+        if(it.type === 'llave'){
+          // Llave dorada
+          ctx.fillStyle = COLORS.key;
+          ctx.beginPath(); ctx.arc(cx-cell*0.1, cy, cell*0.15, 0, Math.PI*2); ctx.fill();
+          ctx.strokeStyle = '#b8860b';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(cx-cell*0.1, cy, cell*0.15, 0, Math.PI*2); ctx.stroke();
+          // Mango de la llave
+          ctx.fillStyle = COLORS.key;
+          ctx.fillRect(cx, cy-cell*0.04, cell*0.25, cell*0.08);
+          // Dientes
+          ctx.fillRect(cx+cell*0.15, cy-cell*0.04, cell*0.04, cell*0.12);
+          ctx.fillRect(cx+cell*0.22, cy-cell*0.04, cell*0.04, cell*0.1);
+        } else {
+          // Ítem genérico azul
+          ctx.fillStyle = COLORS.item;
+          ctx.beginPath(); ctx.arc(cx, cy, cell*0.2, 0, Math.PI*2); ctx.fill();
+          ctx.strokeStyle = '#2266cc';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(cx, cy, cell*0.2, 0, Math.PI*2); ctx.stroke();
+          ctx.fillStyle = '#fff';
+          ctx.font = `bold ${cell*0.2}px sans-serif`;
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText('i', cx, cy+1);
+        }
+      }
+    }
+
+    // NPCs
+    if(world.npcs){
+      for(const npc of world.npcs){
+        const px = offX+npc.x*cell, py = offY+npc.y*cell;
+        const cx = px+cell/2, cy = py+cell/2;
+        const color = npc.completed ? COLORS.npcDone : COLORS.npc;
+        // Cuerpo
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(cx, cy-cell*0.05, cell*0.25, 0, Math.PI*2); ctx.fill();
+        // Cabeza
+        ctx.beginPath(); ctx.arc(cx, cy-cell*0.25, cell*0.15, 0, Math.PI*2); ctx.fill();
+        // Borde
+        ctx.strokeStyle = '#2e7d32';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(cx, cy-cell*0.05, cell*0.25, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy-cell*0.25, cell*0.15, 0, Math.PI*2); ctx.stroke();
+        // Letra N
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${cell*0.2}px sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('N', cx, cy-cell*0.05);
+        // Indicador de completado
+        if(npc.completed){
+          ctx.fillStyle = '#4caf50';
+          ctx.font = `${cell*0.18}px sans-serif`;
+          ctx.fillText('\u2713', cx+cell*0.25, py+cell*0.15);
+        }
+      }
+    }
+
+    // láseres (emisores)
+    if(world.lasers){
+      for(const laser of world.lasers){
+        const px = offX+laser.x*cell, py = offY+laser.y*cell;
+        const cx = px+cell/2, cy = py+cell/2;
+        // Emisor
+        ctx.fillStyle = laser.active ? COLORS.laserEmitter : '#666';
+        ctx.fillRect(px+cell*0.2, py+cell*0.2, cell*0.6, cell*0.6);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px+cell*0.2, py+cell*0.2, cell*0.6, cell*0.6);
+        // Indicador de dirección
+        const dirMap = {
+          'norte':[0,-1], 'arriba':[0,-1], 'sur':[0,1], 'abajo':[0,1],
+          'este':[1,0], 'derecha':[1,0], 'oeste':[-1,0], 'izquierda':[-1,0]
+        };
+        const [ddx,ddy] = dirMap[laser.dir] || [1,0];
+        ctx.fillStyle = laser.active ? '#ff4444' : '#999';
+        ctx.beginPath();
+        ctx.moveTo(cx+ddx*cell*0.3, cy+ddy*cell*0.3);
+        ctx.lineTo(cx+ddy*cell*0.12-ddx*cell*0.1, cy-ddx*cell*0.12-ddy*cell*0.1);
+        ctx.lineTo(cx-ddy*cell*0.12-ddx*cell*0.1, cy+ddx*cell*0.12-ddy*cell*0.1);
+        ctx.closePath();
+        ctx.fill();
+        // Letra L
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${cell*0.2}px sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('L', cx, cy);
+      }
+    }
+
+    // haces de láser - dibujar como líneas continuas
+    if(world.lasers && world.lasers.length > 0){
+      for(const laser of world.lasers){
+        if(!laser.active) continue;
+        
+        const startX = offX + laser.x * cell + cell/2;
+        const startY = offY + laser.y * cell + cell/2;
+        
+        // Calcular dirección
+        const dirMap = {
+          'norte': [0,-1], 'arriba': [0,-1],
+          'sur': [0,1], 'abajo': [0,1],
+          'este': [1,0], 'derecha': [1,0],
+          'oeste': [-1,0], 'izquierda': [-1,0]
+        };
+        const [dx, dy] = dirMap[laser.dir] || [1,0];
+        
+        // Encontrar el punto final del haz
+        let endX = startX;
+        let endY = startY;
+        let cx = laser.x + dx;
+        let cy = laser.y + dy;
+        
+        while(cx >= 0 && cy >= 0 && cx < world.W && cy < world.H){
+          // Detener en pared
+          if(world.walls.some(w => w.x === cx && w.y === cy)) break;
+          // Detener en caja
+          if(world.boxes.some(b => b.x === cx && b.y === cy)) break;
+          
+          endX = offX + cx * cell + cell/2;
+          endY = offY + cy * cell + cell/2;
+          cx += dx;
+          cy += dy;
+        }
+        
+        // Dibujar línea del haz
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.lineWidth = cell * 0.3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        
+        // Brillo central
+        ctx.strokeStyle = 'rgba(255, 100, 100, 0.9)';
+        ctx.lineWidth = cell * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+      }
+    }
+
     // cajas en el suelo
     for(const b of world.boxes) drawBox(offX+b.x*cell, offY+b.y*cell, false);
     // cajas entregadas (sobre metas)
@@ -221,6 +377,9 @@ function makeRenderer(canvas){
 
     // jugador
     drawPlayer(offX + world.player.x*cell, offY + world.player.y*cell, world.player.dir, world.player.carrying);
+
+    // Indicador de inventario (pila)
+    drawInventory(offX, offY, world);
 
     // burbuja de diálogo
     if(sayMsg && Date.now() < sayTimer){
@@ -248,25 +407,19 @@ function makeRenderer(canvas){
   }
 
   function drawPlayer(px, py, dir, carrying){
-    // Determinar qué imagen usar según la dirección
     let playerImg = null;
     if(dir === 'arriba' && IMAGES.player_up) playerImg = IMAGES.player_up;
     else if(dir === 'abajo' && IMAGES.player_down) playerImg = IMAGES.player_down;
     else if(dir === 'izquierda' && IMAGES.player_left) playerImg = IMAGES.player_left;
     else if(dir === 'derecha' && IMAGES.player_right) playerImg = IMAGES.player_right;
-    
-    // Si no hay imagen específica de dirección, usar la genérica
     if(!playerImg && IMAGES.player) playerImg = IMAGES.player;
-    
+
     if(playerImg){
       ctx.drawImage(playerImg, px, py, cell, cell);
-      
-      // Si lleva caja, dibujar imagen de carrying_box
       if(carrying && IMAGES.carrying_box){
         const bs = cell*0.5;
         ctx.drawImage(IMAGES.carrying_box, px + (cell-bs)/2, py - bs*0.3, bs, bs);
       } else if(carrying){
-        // Fallback: dibujar caja pequeña encima
         const bs = cell*0.3;
         ctx.fillStyle = COLORS.box;
         ctx.fillRect(px + cell/2 - bs/2, py+cell*0.02, bs, bs*0.7);
@@ -275,30 +428,17 @@ function makeRenderer(canvas){
         ctx.strokeRect(px + cell/2 - bs/2+0.5, py+cell*0.02+0.5, bs-1, bs*0.7-1);
       }
     } else {
-      // Fallback completo: dibujar círculo rojo
       const cx = px + cell/2, cy = py + cell/2;
       const r = cell*0.34;
-
-      // sombra
       ctx.fillStyle = 'rgba(0,0,0,0.2)';
       ctx.beginPath();
       ctx.ellipse(cx, cy+r*0.6, r*0.85, r*0.3, 0, 0, Math.PI*2);
       ctx.fill();
-
-      // cuerpo — círculo rojo
       ctx.fillStyle = COLORS.player;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI*2);
-      ctx.fill();
-
-      // borde
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
       ctx.strokeStyle = '#b52e2e';
       ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI*2);
-      ctx.stroke();
-
-      // flecha indicadora de dirección
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
       const angle = { arriba:-Math.PI/2, derecha:0, abajo:Math.PI/2, izquierda:Math.PI }[dir] || 0;
       const tipX = cx + Math.cos(angle) * r * 0.85;
       const tipY = cy + Math.sin(angle) * r * 0.85;
@@ -308,21 +448,41 @@ function makeRenderer(canvas){
       const ry = cy + Math.sin(angle - 2.5) * r * 0.55;
       ctx.fillStyle = COLORS.playerDir;
       ctx.beginPath();
-      ctx.moveTo(tipX, tipY);
-      ctx.lineTo(lx, ly);
-      ctx.lineTo(rx, ry);
-      ctx.closePath();
-      ctx.fill();
-
-      // si lleva caja, dibujarla encima
+      ctx.moveTo(tipX, tipY); ctx.lineTo(lx, ly); ctx.lineTo(rx, ry);
+      ctx.closePath(); ctx.fill();
       if(carrying){
         const bs = cell*0.3;
         ctx.fillStyle = COLORS.box;
         ctx.fillRect(cx-bs/2, py+cell*0.02, bs, bs*0.7);
-        ctx.strokeStyle = '#5a3812';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#5a3812'; ctx.lineWidth = 1;
         ctx.strokeRect(cx-bs/2+0.5, py+cell*0.02+0.5, bs-1, bs*0.7-1);
       }
+    }
+  }
+
+  function drawInventory(offX, offY, world){
+    if(!world.inventory || world.inventory.length === 0) return;
+    // Dibujar indicador de inventario en esquina superior izquierda del canvas
+    const invX = offX + 4;
+    const invY = offY + 4;
+    const invW = cell * 0.6;
+    const invH = Math.min(world.inventory.length * (cell*0.25) + cell*0.3, cell*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(invX, invY, invW, invH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(invX, invY, invW, invH);
+    // Dibujar items de la pila
+    ctx.font = `${cell*0.15}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for(let i=0; i<world.inventory.length; i++){
+      const it = world.inventory[i];
+      const iy = invY + invH - (i+1)*(cell*0.25);
+      ctx.fillStyle = it.type === 'llave' ? COLORS.key : COLORS.item;
+      ctx.beginPath(); ctx.arc(invX+invW/2, iy, cell*0.08, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.fillText(it.type === 'llave' ? 'k' : 'i', invX+invW/2, iy+1);
     }
   }
 
@@ -336,7 +496,6 @@ function makeRenderer(canvas){
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1.5;
     roundRect(ctx, x, y, w, h, 5, true, true);
-    // triángulo
     ctx.beginPath();
     ctx.moveTo(cx-4, y+h); ctx.lineTo(cx, y+h+5); ctx.lineTo(cx+4, y+h);
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
@@ -367,7 +526,6 @@ function makeRenderer(canvas){
 
   window.addEventListener('resize', ()=>{ resize(); render(); });
 
-  // Creamos la interfaz pública y la guardamos globalmente para poder redibujar desde loadImages
   const api = { setWorld, render, resize, sayBubble };
   window.__renderer = api;
   return api;

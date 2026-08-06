@@ -305,6 +305,7 @@
       // --- Bloques del juego ---
       case 'game_avanzar': return 'avanzar()';
       case 'game_girar': return 'girar(' + (blk.fields.angle || '90') + ')';
+      case 'game_empujar': return 'empujar()';
       case 'game_mover': return 'mover(' + (blk.fields.dir || 'derecha') + ')';
       case 'game_tomar': return 'tomar()';
       case 'game_soltar': return 'soltar()';
@@ -325,6 +326,15 @@
       case 'game_posicionx': return 'posicionX()';
       case 'game_posiciony': return 'posicionY()';
       case 'game_direccionj': return 'direccionJ()';
+      case 'game_entregar': return 'entregar()';
+      case 'game_hablar': return 'hablar()';
+      case 'game_hayitem': return 'hayItem()';
+      case 'game_haynpc': return 'hayNPC()';
+      case 'game_puertabloqueada': return 'puertaBloqueada()';
+      case 'game_puertaprotegida': return 'puertaProtegida()'; // puerta controlada por señal
+      case 'game_llevollave': return 'llevoLlave()';
+      case 'game_llevocaja': return 'llevoCaja()';
+      case 'game_hayitemen': return 'hayItemEn(' + (blk.fields.x || '0') + ', ' + (blk.fields.y || '0') + ')';
       default: return '// bloque desconocido';
     }
   }
@@ -1341,14 +1351,22 @@
             'abrir': 'game_abrir',
             'cerrar': 'game_cerrar',
             'usar': 'game_usar',
+            'entregar': 'game_entregar',
+            'hablar': 'game_hablar',
+            'empujar': 'game_empujar',
             'frentelibre': 'game_frentelibre',
             'haycaja': 'game_haycaja',
             'hayobjeto': 'game_haycaja',
+            'hayitem': 'game_hayitem',
             'haypuerta': 'game_haypuerta',
             'puertaabierta': 'game_puertaabierta',
+            'puertabloqueada': 'game_puertabloqueada',
+            'puertaprotegida': 'game_puertaprotegida',
             'hayswitch': 'game_hayswitch',
+            'haynpc': 'game_haynpc',
             'llevoobjeto': 'game_llevoobjeto',
-            'llevoobjeto': 'game_llevoobjeto',
+            'llevocaja': 'game_llevocaja',
+            'llevollave': 'game_llevollave',
             'objetivocompleto': 'game_objetivocompleto',
             'posicionx': 'game_posicionx',
             'posiciony': 'game_posiciony',
@@ -1364,6 +1382,9 @@
             addParsedBlock(currentTarget(), 'game_esperar_accion', { tiempo: argsStr }, sourceLine);
           } else if (fnName === 'decir') {
             addParsedBlock(currentTarget(), 'game_decir', { msg: argsStr || '"..."' }, sourceLine);
+          } else if (fnName === 'hayitemen') {
+            const parts = argsStr.split(',').map(s => s.trim());
+            addParsedBlock(currentTarget(), 'game_hayitemen', { x: parts[0] || '0', y: parts[1] || '0' }, sourceLine);
           } else {
             addParsedBlock(currentTarget(), 'llamar', {
               name: line.substring(0, pi).trim(),

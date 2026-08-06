@@ -195,6 +195,15 @@ function parse(src){
         case 'segun': return parseSegun();
       }
     }
+    // Leer variable (entrada por consola)
+    if(isKW('leer')){
+      const tk = eat();
+      const targets = [];
+      const targetName = expect('IDENT').value;
+      targets.push({ type:'Variable', name:targetName, line:tk.line });
+      while(toks[p].type==='COMMA'){ eat(); targets.push({ type:'Variable', name:expect('IDENT').value, line:tk.line }); }
+      return { type:'Read', targets, line:tk.line };
+    }
     // asignación: variable <- expresión
     if(t.type==='IDENT' && peek(1).type==='ASSIGN'){
       const name = eat().value;
