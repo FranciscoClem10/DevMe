@@ -43,8 +43,16 @@
     color: #9c8749;        /* café claro */
     font-style: italic;
   }
-  .console .out {
-    color: #1c180d;        /* oscuro, se puede cambiar si se desea */
+.console .log-in {
+    color: #22a324;        /* morado brillante */
+}
+
+  .console .in {
+      color: #0a97a7 !important;   /* cyan para input */
+  }
+
+  .console .log-info {
+    color: #8cca18;        /* oscuro, se puede cambiar si se desea */
   }
     /* === Editor styles === */
     .editor-wrapper { display:flex; font-family:"Consolas","Monaco",monospace; font-size:14px; line-height:1.5; background:#fcfbf8; border-radius:0.5rem; overflow:hidden; height:100%; min-height:0; border:1px solid #e8e2ce; }
@@ -57,7 +65,7 @@
     .tok-kw{color:#1200ff;font-weight:bold} .tok-type{color:#e404ff} .tok-str{color:#22a324} .tok-num{color:#ff0000} .tok-cmt{color:#048b86;font-style:italic} .tok-op{color:#e6b01d} .tok-bool{color:#005cc5} .tok-name{color:#6f42c1} .tok-var{color:#e36209}     .tok-game{color:#4A148C;font-weight:600}
     .console,.errors{padding:10px;overflow:auto;font-family:"Consolas","Monaco",monospace;font-size:13px;white-space:pre-wrap;word-wrap:break-word;color:#1c180d;height:100%}
     .errors{color:#b31d28} .errors .err-line{padding:3px 6px;border-left:3px solid #b31d28;margin-bottom:4px;background:rgba(179,29,40,0.08)} .errors .err-phase{font-weight:bold;color:#d73a49} .errors .err-ok{color:#22863a;border-left-color:#22863a;background:rgba(34,134,58,0.08)}
-    .console .out{color:#1c180d} .console .in{color:#005cc5} .console .info{color:#9c8749;font-style:italic}
+    .console .info{color:#9c8749;font-style:italic}
     .debug-console{font-size:12px;background:#19150a;color:#f8e7a5}
     .debug-entry{padding:4px 8px;border-bottom:1px solid rgba(244,192,37,.16);white-space:pre-wrap}
     .debug-entry strong{color:#f4c025}
@@ -313,6 +321,30 @@
 
 .input-line button:hover {
   background: #d5ccb2;
+}
+
+/* Consola: más padding inferior para que la última línea no quede tapada por el input */
+#console {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 10px 10px 60px 10px;   /* ← padding inferior extra */
+  box-sizing: border-box;
+}
+
+/* Estilo para mensajes de error en la consola (rojo) */
+.console .err,
+.console .error {
+  color: #b31d28;
+  font-weight: bold;
+}
+
+/* Asegurar que el contenedor de la consola ocupe toda la altura */
+#tab-console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;  /* ← evita que el contenido se desborde */
 }
   </style>
 </head>
