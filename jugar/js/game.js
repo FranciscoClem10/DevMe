@@ -510,12 +510,12 @@ function renderLevelsGrid(){
 }
 
 // -------------- Event listeners --------------
-$('btn-run').addEventListener('click', runGameProgram);
-$('btn-stop').addEventListener('click', stopGameProgram);
-$('btn-pause').addEventListener('click', togglePauseGame);
-$('btn-reset').addEventListener('click', resetGame);
-$('btn-levels').addEventListener('click', ()=>{ renderLevelsGrid(); $('game-levels-modal').style.display='flex'; });
-$('game-close-levels').addEventListener('click', ()=>{ $('game-levels-modal').style.display='none'; });
+//$('btn-run').addEventListener('click', runGameProgram);
+//$('btn-stop').addEventListener('click', stopGameProgram);
+//$('btn-pause').addEventListener('click', togglePauseGame);
+//$('btn-reset').addEventListener('click', resetGame);
+//$('btn-levels').addEventListener('click', ()=>{ renderLevelsGrid(); $('game-levels-modal').style.display='flex'; });
+//$('game-close-levels').addEventListener('click', ()=>{ $('game-levels-modal').style.display='none'; });
 
 function updateStarsDisplay() {
   const starsEl = $('game-stars-display');
