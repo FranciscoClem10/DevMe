@@ -39,6 +39,13 @@
       background-size: 60px 35px;
       background-repeat: repeat;
   }
+  .console .info {
+    color: #9c8749;        /* café claro */
+    font-style: italic;
+  }
+  .console .out {
+    color: #1c180d;        /* oscuro, se puede cambiar si se desea */
+  }
     /* === Editor styles === */
     .editor-wrapper { display:flex; font-family:"Consolas","Monaco",monospace; font-size:14px; line-height:1.5; background:#fcfbf8; border-radius:0.5rem; overflow:hidden; height:100%; min-height:0; border:1px solid #e8e2ce; }
     .line-numbers { padding:8px 8px 8px 12px; background:#f5f3ee; color:#9c8749; text-align:right; user-select:none; border-right:1px solid #e8e2ce; min-width:40px; overflow:auto; white-space:pre; font-family:inherit; font-size:inherit; line-height:inherit; scrollbar-width:none; }
@@ -236,6 +243,7 @@
     .console-toolbar { display:flex; align-items:center; gap:4px; margin-left:auto; padding:0 8px; }
     .console-toolbar button { background:transparent; border:none; cursor:pointer; color:#9c8749; padding:3px 6px; border-radius:4px; font-size:14px; display:flex; align-items:center; transition:all 0.15s; }
     .console-toolbar button:hover { background:rgba(179,29,40,0.1); color:#b31d28; }
+    
   </style>
 </head>
 <body class="bg-background-light font-display text-text-light overflow-hidden">

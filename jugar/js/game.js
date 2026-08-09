@@ -479,7 +479,7 @@ function resetEnemiesToOrigin(){
 function onGameWin(n){
   const def = world.def;
   setGameStatus('ok','Completado!');
-  gameLog(`Nivel completado en ${n} instrucciones!`, 'ok');
+  gameLog(`Nivel completado en ${n} instrucciones!`, 'info');
   const {gold, silver} = def.starThresholds || {gold:999,silver:999};
   let stars = 1;
   if(n <= gold) stars = 3;
