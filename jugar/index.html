@@ -243,7 +243,77 @@
     .console-toolbar { display:flex; align-items:center; gap:4px; margin-left:auto; padding:0 8px; }
     .console-toolbar button { background:transparent; border:none; cursor:pointer; color:#9c8749; padding:3px 6px; border-radius:4px; font-size:14px; display:flex; align-items:center; transition:all 0.15s; }
     .console-toolbar button:hover { background:rgba(179,29,40,0.1); color:#b31d28; }
-    
+
+    /* Contenedor de la consola: usa flex para separar scroll e input */
+#tab-console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#console {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 10px;
+  /* El resto de estilos (bg-panal, etc.) ya están */
+}
+
+/* Input line: discreto, sin sombras, colores apagados */
+.input-line {
+  padding: 6px 8px;
+  background: #f5f3ee;    /* tono similar al fondo de consola */
+  border-top: 1px solid #e8e2ce;  /* borde sutil */
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;         /* no se encoge */
+}
+
+/* Prompt (etiqueta "Entrada:") */
+#input-prompt {
+  color: #9c8749;         /* café claro */
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Campo de texto */
+.input-line input {
+  flex: 1;
+  padding: 4px 8px;
+  background: #fcfbf8;    /* casi blanco, se integra */
+  color: #1c180d;
+  border: 1px solid #d0c8b4;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+
+.input-line input:focus {
+  border-color: #f4c025;
+  box-shadow: 0 0 0 2px rgba(244,192,37,0.15);
+}
+
+/* Botón "Enviar" */
+.input-line button {
+  padding: 4px 12px;
+  background: #e8e2ce;     /* café claro, sin contraste fuerte */
+  color: #1c180d;
+  border: 1px solid #d0c8b4;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 11px;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.input-line button:hover {
+  background: #d5ccb2;
+}
   </style>
 </head>
 <body class="bg-background-light font-display text-text-light overflow-hidden">
