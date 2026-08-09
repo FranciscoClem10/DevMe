@@ -173,7 +173,7 @@
         // Connect ElseIfs
         for (let i = 0; i < elseIfResults.length; i++) {
           const ei = elseIfResults[i];
-          addLine(`${id} -->|${exprToString(stmt.elseIfs[i].condition)}| ${ei.id}`);
+          addLine(`${id} -->|${escapeLabel(exprToString(stmt.elseIfs[i].condition))}| ${ei.id}`);
           if (ei.result.endId) addLine(`${ei.result.endId} --> ${endIfId}`);
           else addLine(`${ei.id} --> ${endIfId}`);
         }
@@ -225,7 +225,7 @@
         addLine(`${id}{"${escapeLabel(label)}"}:::decisionNode`);
 
         for (const cr of caseResults) {
-          addLine(`${id} -->|${cr.values}| ${cr.id}`);
+          addLine(`${id} -->|${escapeLabel(cr.values)}| ${cr.id}`);
           if (cr.result.endId) addLine(`${cr.result.endId} --> ${continueId}`);
           else addLine(`${cr.id} --> ${continueId}`);
         }

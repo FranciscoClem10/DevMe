@@ -506,12 +506,13 @@
 
   // === Event listeners ===
   btnRun.addEventListener('click', () => {
-    // If in game layout or split mode, run the game
-    if (currentLayout === 'game' || currentLayout === 'split-code' || currentLayout === 'split-blocks') {
-      if (typeof window.runGameProgram === 'function') window.runGameProgram();
-    } else {
-      runProgram();
-    }
+      // Si estamos en un layout que ejecuta el juego, generamos el diagrama primero
+      if (currentLayout === 'game' || currentLayout === 'split-code' || currentLayout === 'split-blocks') {
+          generateAndRenderDiagramFromSource(editor.textarea.value);
+          if (typeof window.runGameProgram === 'function') window.runGameProgram();
+      } else {
+          runProgram();
+      }
   });
   btnStop.addEventListener('click', () => {
     stopProgram();
@@ -1129,6 +1130,21 @@ document.querySelectorAll('.main-tab').forEach(tab => {
       }
     });
   }
+  function generateAndRenderDiagramFromSource(src) {
+    if (!src || !src.trim()) return;
+    const { tokens, errors: lexErrors } = Lexer.tokenize(src);
+    if (lexErrors && lexErrors.length) return;
+    const { ast, errors: parseErrors } = Parser.parse(tokens);
+    if (parseErrors && parseErrors.length) return;
+    const { errors: semErrors } = Semantic.analyze(ast);
+    if (semErrors && semErrors.length) return;
+    try {
+        const mermaidCode = DiagramGenerator.generateDiagram(ast);
+        renderMermaid(mermaidCode);
+    } catch (e) {
+        console.warn('Error al generar diagrama:', e);
+    }
+}
 
   // ============================================================
   // Apply initial layout: Code + Game (split view)

@@ -214,14 +214,18 @@ function gameLog(msg, cls){
 // -------------- Ejecucion del juego --------------
 async function runGameProgram(){
   if(controller) return;
+  
+  // ==== LEER MODO PASO A PASO ====
+  const stepMode = document.getElementById('step-mode')?.checked || false;
+
   // Stop enemy patrol and reset enemies to original positions
   stopEnemyPatrol();
   resetEnemiesToOrigin();
-  // Small delay to let the return animation play
   await new Promise(r => setTimeout(r, 350));
   
   const consoleEl = $('console');
   if(consoleEl) consoleEl.innerHTML = '';
+  
   // Reiniciar mundo desde estado inicial
   world = cloneWorld(initialWorld);
   renderer.setWorld(world);
@@ -245,6 +249,18 @@ async function runGameProgram(){
     return;
   }
 
+  // ===== SI MODO PASO A PASO: sincronizar bloques y cambiar de pestaña =====
+  if (stepMode && typeof BlockEditor !== 'undefined' && BlockEditor.isReady()) {
+    try {
+      BlockEditor.syncFromCode(src);
+    } catch (e) {
+      console.warn('Error sincronizando bloques en modo paso a paso:', e);
+    }
+    // Cambiar a la pestaña de bloques (usando applyLayout o click en el tab)
+    const blocksTab = document.querySelector('.main-tab[data-main-tab="blocks"]');
+    if (blocksTab) blocksTab.click();
+  }
+
   controller = new AbortController();
   setGameStatus('running','Ejecutando...');
   $('btn-run').disabled = true;
@@ -257,7 +273,13 @@ async function runGameProgram(){
 
   const ui = {
     getStepDelay: ()=> (850 - parseInt(gameSpeed.value,10)),
-    onStep: (line)=>{ highlightLine=line; },
+    // ===== onStep mejorado: resalta el bloque si estamos en modo paso a paso =====
+    onStep: (line)=>{
+      highlightLine = line;
+      if (stepMode && typeof BlockEditor !== 'undefined') {
+        BlockEditor.highlightLine(line);
+      }
+    },
     render: ()=>{ renderer.render(); updateGoalsUI(); },
     updateCounter: (n)=>{ updateInstrCount(n); },
     log: gameLog,
@@ -271,7 +293,7 @@ async function runGameProgram(){
       renderer.animateEntity(entity, fromX, fromY, duration);
     },
     read: (varName)=>{
-      // Mostrar input line y esperar respuesta
+      // ... (sin cambios, mantén el código original de read) ...
       return new Promise((resolve, reject) => {
         const inputLine = $('input-line');
         const stdinInput = $('stdin');
@@ -279,7 +301,6 @@ async function runGameProgram(){
         const btnSend = $('btn-send');
         if(!inputLine || !stdinInput) { resolve(''); return; }
 
-        // Asegurar que la pestaña de consola esté activa
         const consoleTab = document.querySelector('.tab[data-tab="console"]');
         if(consoleTab && !consoleTab.classList.contains('active')) consoleTab.click();
 
@@ -296,7 +317,6 @@ async function runGameProgram(){
 
         const send = () => {
           const val = stdinInput.value;
-          // Mostrar en consola
           const c = $('console');
           if(c){
             const d = document.createElement('span');
@@ -339,7 +359,6 @@ async function runGameProgram(){
       setGameStatus('idle','Detenido');
       gameLog('--- Ejecucion cancelada ---', 'info');
     } else {
-      // Final render and goal update to ensure UI is in sync
       renderer.render();
       updateGoalsUI();
       if(checkGoalsSilent()){
@@ -351,7 +370,6 @@ async function runGameProgram(){
     }
   } catch(e){
     if(e.message==='__WIN__'){
-      // Force final render before showing win
       renderer.render();
       updateGoalsUI();
       onGameWin(parseInt($('game-instr-count').textContent,10)||0);
@@ -363,7 +381,6 @@ async function runGameProgram(){
       gameLog(`Linea ${e.line||'?'}: ${msg}`, 'err');
       setGameStatus('err','Error');
       showGameOverlay(msg, true, { line: e.line, fix: e.fix });
-      // Reiniciar mundo tras error
       world = cloneWorld(initialWorld);
       renderer.setWorld(world);
       updateGoalsUI();
@@ -376,8 +393,11 @@ async function runGameProgram(){
     $('btn-pause').querySelector('.material-symbols-outlined').textContent = 'pause';
     $('btn-pause').dataset.paused = 'false';
     window.__gameState = null;
-    // Restart enemy patrol after game ends
     startEnemyPatrol();
+    // Al finalizar, si estábamos en modo paso a paso, limpiar el resaltado
+    if (stepMode && typeof BlockEditor !== 'undefined') {
+      BlockEditor.clearHighlight();
+    }
   }
 }
 
