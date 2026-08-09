@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Assault - Aprende Tipos de Datos</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            background-color: #04040a;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 40px rgba(0, 255, 200, 0.15), 0 0 80px rgba(0, 100, 255, 0.08);
+            border: 2px solid #1a1a3a;
+            border-radius: 6px;
+            max-height: 98vh;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background: #06060f;
+            cursor: none;
+            border-radius: 4px;
+            max-height: 96vh;
+            width: auto;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <canvas id="gameCanvas" width="1600" height="850"></canvas>
+</div>
+
+<script>
+    // roundRect polyfill for older browsers
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (typeof r === 'number') r = [r, r, r, r];
+            const [tl, tr, br, bl] = r;
+            this.moveTo(x + tl, y);
+            this.lineTo(x + w - tr, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + tr);
+            this.lineTo(x + w, y + h - br);
+            this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+            this.lineTo(x + bl, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - bl);
+            this.lineTo(x, y + tl);
+            this.quadraticCurveTo(x, y, x + tl, y);
+            this.closePath();
+            return this;
+        };
+    }
+</script>
+<script src="stateMachine.js"></script>
+<script src="input.js"></script>
+<script src="objectPool.js"></script>
+<script src="bullet.js"></script>
+<script src="powerup.js"></script>
+<script src="particles.js"></script>
+<script src="enemy.js"></script>
+<script src="boss.js"></script>
+<script src="collisions.js"></script>
+<script src="waveManager.js"></script>
+<script src="player.js"></script>
+<script src="game.js"></script>
+
+<script>
+    window.onload = () => {
+        window.dataAssaultGame = new Game();
+    };
+</script>
+</body>
+</html>

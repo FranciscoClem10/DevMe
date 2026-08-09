@@ -716,8 +716,17 @@ const BUILTINS = {
     const itemIdx = (w.items||[]).findIndex(it => it.x===px && it.y===py);
     if(itemIdx >= 0){
       const item = w.items.splice(itemIdx, 1)[0];
-      w.inventory.push({ type: item.type, id: item.id });
-      state.log(`Recogido: ${item.type} (${item.id})`, 'log-info');
+      const invItem = { type: item.type, id: item.id };
+      // Store linked door info for keys
+      if(item.linkedDoor){
+        invItem.linkedDoor = item.linkedDoor;
+      }
+      if(item.displayName){
+        invItem.displayName = item.displayName;
+      }
+      w.inventory.push(invItem);
+      const displayName = item.displayName ? ` (${item.displayName})` : '';
+      state.log(`Recogido: ${item.type}${displayName}`, 'log-info');
       await doAction(state, line);
       return;
     }
@@ -783,8 +792,25 @@ const BUILTINS = {
       // Buscar llave en el inventario (LIFO - cima de la pila)
       const keyIdx = findLastIndex(w.inventory, it => it.type === 'llave');
       if(keyIdx < 0) throw RuntimeError('La puerta está bloqueada. Necesitas una llave.', line);
-      w.inventory.splice(keyIdx, 1); // consumir llave
-      state.log('Llave consumida. Puerta desbloqueada.', 'log-info');
+      const key = w.inventory[keyIdx];
+      // Check if the key is linked to a specific door
+      if(key.linkedDoor){
+        // Key is linked to a specific door - check if it matches this door
+        if(key.linkedDoor.x === d.x && key.linkedDoor.y === d.y){
+          // Correct key for this door
+          w.inventory.splice(keyIdx, 1); // consumir llave
+          const displayName = key.displayName ? ` (${key.displayName})` : '';
+          state.log(`Llave${displayName} consumida. Puerta desbloqueada.`, 'log-info');
+        } else {
+          // Wrong key for this door
+          const displayName = key.displayName ? ` (${key.displayName})` : '';
+          throw RuntimeError(`Esta llave${displayName} no abre esta puerta. Busca la llave correcta.`, line);
+        }
+      } else {
+        // Key has no link - works on any locked door (backward compatibility)
+        w.inventory.splice(keyIdx, 1); // consumir llave
+        state.log('Llave consumida. Puerta desbloqueada.', 'log-info');
+      }
     }
     d.open = true;
     await doAction(state, line);

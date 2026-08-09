@@ -136,15 +136,11 @@
         </div>
       </div>
       <div class="p-3 flex-1">
-        <div class="config-label mb-2">Direccion inicial</div>
-        <select id="player-dir" class="config-input w-full">
-          <option value="derecha">Derecha</option><option value="izquierda">Izquierda</option><option value="arriba">Arriba</option><option value="abajo">Abajo</option>
-        </select>
-        <div class="config-label mt-3 mb-2">Tamano del mapa</div>
-        <div class="flex gap-2">
-          <div class="flex-1"><label class="text-xs text-text-light-muted">Ancho</label><input type="number" id="grid-width" class="config-input w-full" value="8" min="3" max="20" onchange="resizeGrid()" /></div>
-          <div class="flex-1"><label class="text-xs text-text-muted">Alto</label><input type="number" id="grid-height" class="config-input w-full" value="7" min="3" max="20" onchange="resizeGrid()" /></div>
-        </div>
+        <p class="text-xs text-text-light-muted">Usa la pestana <b>Vinculos</b> para configurar direccion del jugador, tamano del mapa y propiedades de cada elemento.</p>
+        <!-- Hidden inputs for backward compatibility -->
+        <input type="hidden" id="player-dir" value="derecha" />
+        <input type="hidden" id="grid-width" value="8" />
+        <input type="hidden" id="grid-height" value="7" />
       </div>
     </aside>
 
@@ -192,6 +188,7 @@
 
       <div id="tab-config" class="flex-1 overflow-auto p-4" style="display:none">
         <div style="max-width:600px">
+          <p class="text-xs text-text-light-muted mb-4">Configuracion basica del nivel: nombre, descripcion, objetivos, pistas y estrellas. Para propiedades de elementos y vinculaciones, usa la pestana <b>Vinculos</b>.</p>
           <div class="config-group"><label class="config-label">ID del nivel</label><input type="number" id="level-id" class="config-input" value="16" min="1" /></div>
           <div class="config-group"><label class="config-label">Nombre del nivel</label><input type="text" id="level-name" class="config-input" value="Mi nivel" /></div>
           <div class="config-group"><label class="config-label">Descripcion</label><textarea id="level-desc" class="config-textarea">Describe el objetivo de este nivel...</textarea></div>
@@ -210,7 +207,7 @@ FinAlgoritmo</textarea></div>
       <!-- NEW LINKS TAB -->
       <div id="tab-links" class="flex-1 overflow-auto p-4" style="display:none">
         <div style="max-width:750px">
-          <p class="text-xs text-text-light-muted mb-4">Haz clic en los elementos de abajo para vincularlos. Los interruptores y placas controlan puertas y laseres. Los NPCs reciben items.</p>
+          <p class="text-xs text-text-light-muted mb-4">Configura las propiedades de todos los elementos del nivel. Vincula interruptores con puertas, llaves con puertas bloqueadas, y mas.</p>
           <div id="links-container"></div>
         </div>
       </div>
@@ -276,12 +273,12 @@ const ELEMENTS = [
 
 let gridW=8, gridH=7, grid=[], currentTool='wall', isMouseDown=false;
 // Link data: arrays of objects per element type found on grid
-let switchLinks=[], plateLinks=[], npcConfigs=[], laserConfigs=[], enemyConfigs=[], pistonConfigs=[];
+let switchLinks=[], plateLinks=[], npcConfigs=[], laserConfigs=[], enemyConfigs=[], pistonConfigs=[], keyConfigs=[];
 // Zoom/Pan state
 let vpZoom=1, vpOffX=0, vpOffY=0, vpPanning=false, vpPanStartX=0, vpPanStartY=0;
 // Link mode state
 let linkMode=false, selectedActivator=null; // {type:'switch'|'plate'|'npc'|'laser'|'enemy'|'piston', x, y, idx}
-const LINK_COLORS = {switch:'#888', plate:'#9c27b0', npc:'#4caf50', laser:'#cc0000', enemy:'#d32f2f', piston:'#607d8b'};
+const LINK_COLORS = {switch:'#888', plate:'#9c27b0', npc:'#4caf50', laser:'#cc0000', enemy:'#d32f2f', piston:'#607d8b', key:'#ffd700'};
 
 // ---- Grid helpers ----
 function findElements(ch){
@@ -324,7 +321,16 @@ function resizeGrid(){
   for(let y=0;y<gridH;y++){grid[y]=[];for(let x=0;x<gridW;x++) grid[y][x]=(old[y]&&old[y][x])?old[y][x]:'.';}
   renderGrid(); updatePreview(); centerGrid();
 }
-function renderGrid(){
+function resizeGridFromLinks(){
+  const nW=Math.min(Math.max(parseInt(document.getElementById('links-grid-width').value)||8,3),20);
+  const nH=Math.min(Math.max(parseInt(document.getElementById('links-grid-height').value)||7,3),20);
+  document.getElementById('grid-width').value=nW;
+  document.getElementById('grid-height').value=nH;
+  const old=grid.map(r=>[...r]); gridW=nW; gridH=nH; grid=[];
+  for(let y=0;y<gridH;y++){grid[y]=[];for(let x=0;x<gridW;x++) grid[y][x]=(old[y]&&old[y][x])?old[y][x]:'.';}
+  renderGrid(); updatePreview(); centerGrid();
+  renderLinksTab();
+}function renderGrid(){
   const c=document.getElementById('grid-container');
   c.style.gridTemplateColumns=`repeat(${gridW},48px)`; c.innerHTML='';
   for(let y=0;y<gridH;y++) for(let x=0;x<gridW;x++){
@@ -419,23 +425,108 @@ function renderLinksTab(){
   const lasers=findElements('L');
   const plates=findElements('o');
   const npcs=findElements('N');
+  const enemies=findElements('F');
+  const pistons=findElements('G');
+  const keys=findElements('k');
 
   // Sync link arrays with grid positions
   syncLinks('switch', switches, switchLinks);
   syncLinks('plate', plates, plateLinks);
   syncLinks('npc', npcs, npcConfigs);
   syncLinks('laser', lasers, laserConfigs);
-
-  const enemies=findElements('F');
-  const pistons=findElements('G');
   syncLinks('enemy', enemies, enemyConfigs);
   syncLinks('piston', pistons, pistonConfigs);
+  syncLinks('key', keys, keyConfigs);
+
+  // ---- GENERAL SECTION ----
+  {
+    const section=createSection('General','settings','#9c8749','Configuracion general del nivel: direccion del jugador y tamano del mapa.');
+    const card=document.createElement('div');
+    card.className='link-card';
+    card.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="text-xs font-semibold" style="color:#9c8749">Direccion inicial del jugador:</span>
+        <select id="links-player-dir" class="config-input" style="padding:3px 6px;font-size:12px;width:110px">
+          <option value="derecha">Derecha</option><option value="izquierda">Izquierda</option><option value="arriba">Arriba</option><option value="abajo">Abajo</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <span class="text-xs font-semibold" style="color:#9c8749">Tamano del mapa:</span>
+        <span class="text-xs" style="color:#9c8749">Ancho</span>
+        <input type="number" id="links-grid-width" class="config-input" style="width:60px;padding:3px 6px;font-size:12px" value="${gridW}" min="3" max="20" />
+        <span class="text-xs" style="color:#9c8749">Alto</span>
+        <input type="number" id="links-grid-height" class="config-input" style="width:60px;padding:3px 6px;font-size:12px" value="${gridH}" min="3" max="20" />
+        <button class="btn btn-sm btn-outline" onclick="resizeGridFromLinks()">Aplicar</button>
+      </div>
+    `;
+    section.appendChild(card);
+    container.appendChild(section);
+    // Set current player dir
+    setTimeout(()=>{
+      const sel=document.getElementById('links-player-dir');
+      if(sel) sel.value=document.getElementById('player-dir').value||'derecha';
+      if(sel) sel.onchange=function(){document.getElementById('player-dir').value=this.value;};
+    },0);
+  }
+
+  // ---- KEYS SECTION ----
+  if(keys.length>0){
+    const section=createSection('Llaves','key','#ffd700','Vincula cada llave con una puerta bloqueada. Puedes asignar un nombre para identificarlas.');
+    keys.forEach((k,i)=>{
+      const card=createLinkCard('Llave',k,cellIcon('k'),'#fffde7','#ffd700',keyConfigs[i].displayName);
+      
+      // Display name
+      const nameRow=document.createElement('div');
+      nameRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+      nameRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Nombre:</span>`;
+      const nameInput=document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='Ej: Llave maestra';
+      nameInput.value=keyConfigs[i].displayName||'';
+      nameInput.className='config-input'; nameInput.style.cssText='flex:1;padding:3px 6px;font-size:12px';
+      nameInput.onchange=function(){keyConfigs[i].displayName=this.value};
+      nameRow.appendChild(nameInput);
+      card.appendChild(nameRow);
+
+      // Link to locked doors
+      const targetsHeader=document.createElement('div');
+      targetsHeader.className='link-section-title';
+      targetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span> Puerta que abre (clic para vincular):';
+      card.appendChild(targetsHeader);
+
+      const chipsWrap=document.createElement('div');
+      chipsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;';
+      const lockedDoors=findElements('K');
+      lockedDoors.forEach(d=>{
+        const chip=createTargetChip('K',d,keyConfigs[i],'door');
+        chipsWrap.appendChild(chip);
+      });
+      if(lockedDoors.length===0){
+        chipsWrap.innerHTML='<span class="empty-hint">No hay puertas bloqueadas (K) en el mapa.</span>';
+      }
+      card.appendChild(chipsWrap);
+      section.appendChild(card);
+    });
+    container.appendChild(section);
+  }
 
   // ---- SWITCHES SECTION ----
   if(switches.length>0){
     const section=createSection('Interruptores','toggle_on','#888','Cada interruptor puede abrir puertas, desactivar laseres, activar pistones o desactivar enemigos.');
     switches.forEach((sw,i)=>{
-      const card=createLinkCard('Interruptor',sw,cellIcon('S'),'#f5f3ee','#888');
+      const card=createLinkCard('Interruptor',sw,cellIcon('S'),'#f5f3ee','#888',switchLinks[i].displayName);
+      
+      // Display name
+      const nameRow=document.createElement('div');
+      nameRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+      nameRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Nombre:</span>`;
+      const nameInput=document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='Ej: Interruptor principal';
+      nameInput.value=switchLinks[i].displayName||'';
+      nameInput.className='config-input'; nameInput.style.cssText='flex:1;padding:3px 6px;font-size:12px';
+      nameInput.onchange=function(){switchLinks[i].displayName=this.value};
+      nameRow.appendChild(nameInput);
+      card.appendChild(nameRow);
+
       // Targets: doors + lasers + enemies + pistons
       const targetsHeader=document.createElement('div');
       targetsHeader.className='link-section-title';
@@ -481,7 +572,19 @@ function renderLinksTab(){
   if(plates.length>0){
     const section=createSection('Placas de presion','radio_button_checked','#777','Cada placa se activa al poner una caja encima. Controla puertas.');
     plates.forEach((pp,i)=>{
-      const card=createLinkCard('Placa',pp,cellIcon('o'),'#f5f3ee','#777');
+      const card=createLinkCard('Placa',pp,cellIcon('o'),'#f5f3ee','#777',plateLinks[i].displayName);
+
+      // Display name
+      const nameRow=document.createElement('div');
+      nameRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+      nameRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Nombre:</span>`;
+      const nameInput=document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='Ej: Placa de entrada';
+      nameInput.value=plateLinks[i].displayName||'';
+      nameInput.className='config-input'; nameInput.style.cssText='flex:1;padding:3px 6px;font-size:12px';
+      nameInput.onchange=function(){plateLinks[i].displayName=this.value};
+      nameRow.appendChild(nameInput);
+      card.appendChild(nameRow);
 
       // Cajas requeridas
       const cajasRow=document.createElement('div');
@@ -518,7 +621,19 @@ function renderLinksTab(){
   if(npcs.length>0){
     const section=createSection('NPCs','face','#4caf50','Configura que necesita cada NPC para completarse.');
     npcs.forEach((n,i)=>{
-      const card=createLinkCard('NPC',n,cellIcon('N'),'#f0faf0','#4caf50');
+      const card=createLinkCard('NPC',n,cellIcon('N'),'#f0faf0','#4caf50',npcConfigs[i].displayName);
+
+      // Display name
+      const nameRow=document.createElement('div');
+      nameRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+      nameRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Nombre:</span>`;
+      const nameInput=document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='Ej: Guardian del bosque';
+      nameInput.value=npcConfigs[i].displayName||'';
+      nameInput.className='config-input'; nameInput.style.cssText='flex:1;padding:3px 6px;font-size:12px';
+      nameInput.onchange=function(){npcConfigs[i].displayName=this.value};
+      nameRow.appendChild(nameInput);
+      card.appendChild(nameRow);
 
       // Required items
       const itemsHeader=document.createElement('div');
@@ -579,7 +694,20 @@ function renderLinksTab(){
   if(lasers.length>0){
     const section=createSection('Laseres','flash_on','#cc0000','Configura la direccion y estado de cada laser.');
     lasers.forEach((l,i)=>{
-      const card=createLinkCard('Laser',l,cellIcon('L'),'#fff5f5','#cc0000');
+      const card=createLinkCard('Laser',l,cellIcon('L'),'#fff5f5','#cc0000',laserConfigs[i].displayName);
+
+      // Display name
+      const nameRow=document.createElement('div');
+      nameRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+      nameRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Nombre:</span>`;
+      const nameInput=document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='Ej: Laser de seguridad';
+      nameInput.value=laserConfigs[i].displayName||'';
+      nameInput.className='config-input'; nameInput.style.cssText='flex:1;padding:3px 6px;font-size:12px';
+      nameInput.onchange=function(){laserConfigs[i].displayName=this.value};
+      nameRow.appendChild(nameInput);
+      card.appendChild(nameRow);
+
       const row=document.createElement('div');
       row.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap';
       row.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Direccion:</span>`;
@@ -609,7 +737,20 @@ function renderLinksTab(){
   if(enemies.length>0){
     const section=createSection('Enemigos','dangerous','#d32f2f','Configura el comportamiento de cada enemigo. Los enemigos se mueven automaticamente y matan al jugador al tocarlo.');
     enemies.forEach((e,i)=>{
-      const card=createLinkCard('Enemigo',e,cellIcon('F'),'#fff0f0','#d32f2f');
+      const card=createLinkCard('Enemigo',e,cellIcon('F'),'#fff0f0','#d32f2f',enemyConfigs[i].displayName);
+
+      // Display name
+      const nameRow=document.createElement('div');
+      nameRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+      nameRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Nombre:</span>`;
+      const nameInput=document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='Ej: Dragon guardian';
+      nameInput.value=enemyConfigs[i].displayName||'';
+      nameInput.className='config-input'; nameInput.style.cssText='flex:1;padding:3px 6px;font-size:12px';
+      nameInput.onchange=function(){enemyConfigs[i].displayName=this.value};
+      nameRow.appendChild(nameInput);
+      card.appendChild(nameRow);
+
       const row=document.createElement('div');
       row.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap';
       row.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Direccion inicial:</span>`;
@@ -656,32 +797,7 @@ function renderLinksTab(){
 
       card.appendChild(row);
 
-      // Enemy targets (signal to deactivate)
-      const enemyTargetsHeader=document.createElement('div');
-      enemyTargetsHeader.className='link-section-title';
-      enemyTargetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span; Activadores que lo desactivan (clic para vincular):';
-      card.appendChild(enemyTargetsHeader);
-      const enemyTargetsWrap=document.createElement('div');
-      enemyTargetsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;';
-      // Show switches as potential deactivators
-      const mapSwitches=findElements('S');
-      mapSwitches.forEach(s=>{
-        const linked=(enemyConfigs[i].targets||[]).some(t=>t.x===s.x&&t.y===s.y);
-        const chip=document.createElement('span');
-        chip.className='target-chip'+(linked?' selected':'');
-        chip.innerHTML=`<span class="chip-icon material-symbols-outlined">toggle_on</span>Switch (${s.x},${s.y})`;
-        chip.onclick=()=>{
-          if(!enemyConfigs[i].targets) enemyConfigs[i].targets=[];
-          const idx=enemyConfigs[i].targets.findIndex(t=>t.x===s.x&&t.y===s.y);
-          if(idx>=0) enemyConfigs[i].targets.splice(idx,1);
-          else enemyConfigs[i].targets.push({x:s.x,y:s.y,type:'switch'});
-          renderLinksTab();
-        };
-        enemyTargetsWrap.appendChild(chip);
-      });
-      if(mapSwitches.length===0) enemyTargetsWrap.innerHTML='<span class="empty-hint">No hay interruptores en el mapa.</span>';
-      card.appendChild(enemyTargetsWrap);
-
+      // Enemy targets (signal to deactivate) - shown on switch side, not here
       section.appendChild(card);
     });
     container.appendChild(section);
@@ -689,9 +805,22 @@ function renderLinksTab(){
 
   // ---- PISTON SECTION ----
   if(pistons.length>0){
-    const section=createSection('Pistones','precision_manufacturing','#607d8b','Configura la direccion y comportamiento de cada piston. Los pistones empujan o atraen bloques.');
+    const section=createSection('Pistones','precision_manufacturing','#607d8b','Configura la direccion y comportamiento de cada piston. Los pistones empujan bloques al activarse.');
     pistons.forEach((p,i)=>{
-      const card=createLinkCard('Piston',p,cellIcon('G'),'#f5f5f5','#607d8b');
+      const card=createLinkCard('Piston',p,cellIcon('G'),'#f5f5f5','#607d8b',pistonConfigs[i].displayName);
+
+      // Display name
+      const nameRow=document.createElement('div');
+      nameRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+      nameRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Nombre:</span>`;
+      const nameInput=document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='Ej: Piston secreto';
+      nameInput.value=pistonConfigs[i].displayName||'';
+      nameInput.className='config-input'; nameInput.style.cssText='flex:1;padding:3px 6px;font-size:12px';
+      nameInput.onchange=function(){pistonConfigs[i].displayName=this.value};
+      nameRow.appendChild(nameInput);
+      card.appendChild(nameRow);
+
       const row=document.createElement('div');
       row.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap';
       row.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Direccion:</span>`;
@@ -709,34 +838,11 @@ function renderLinksTab(){
       stickyLbl.style.cssText='display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer';
       const stickyCb=document.createElement('input'); stickyCb.type='checkbox'; stickyCb.checked=!!pistonConfigs[i].sticky;
       stickyCb.onchange=function(){pistonConfigs[i].sticky=this.checked};
-      stickyLbl.appendChild(stickyCb); stickyLbl.appendChild(document.createTextNode(' Pegajoso (atrae)'));
+      stickyLbl.appendChild(stickyCb); stickyLbl.appendChild(document.createTextNode(' Pegajoso (atrae al retraer)'));
       row.appendChild(stickyLbl);
       card.appendChild(row);
 
-      // Piston activation targets (what activates this piston)
-      const pistonTargetsHeader=document.createElement('div');
-      pistonTargetsHeader.className='link-section-title';
-      pistonTargetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_back</span> Activadores que lo controlan (clic para vincular):';
-      card.appendChild(pistonTargetsHeader);
-      const pistonTargetsWrap=document.createElement('div');
-      pistonTargetsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;';
-      const mapSwitches=findElements('S');
-      mapSwitches.forEach(s=>{
-        const linked=(pistonConfigs[i].targets||[]).some(t=>t.x===s.x&&t.y===s.y);
-        const chip=document.createElement('span');
-        chip.className='target-chip'+(linked?' selected':'');
-        chip.innerHTML=`<span class="chip-icon material-symbols-outlined">toggle_on</span>Switch (${s.x},${s.y})`;
-        chip.onclick=()=>{
-          if(!pistonConfigs[i].targets) pistonConfigs[i].targets=[];
-          const idx=pistonConfigs[i].targets.findIndex(t=>t.x===s.x&&t.y===s.y);
-          if(idx>=0) pistonConfigs[i].targets.splice(idx,1);
-          else pistonConfigs[i].targets.push({x:s.x,y:s.y,type:'switch'});
-          renderLinksTab();
-        };
-        pistonTargetsWrap.appendChild(chip);
-      });
-      if(mapSwitches.length===0) pistonTargetsWrap.innerHTML='<span class="empty-hint">No hay interruptores en el mapa.</span>';
-      card.appendChild(pistonTargetsWrap);
+      // NOTE: Activator links are managed from the Switch section, not here
 
       section.appendChild(card);
     });
@@ -744,12 +850,12 @@ function renderLinksTab(){
   }
 
   // Empty state
-  if(switches.length===0&&plates.length===0&&npcs.length===0&&lasers.length===0&&enemies.length===0&&pistons.length===0){
+  if(switches.length===0&&plates.length===0&&npcs.length===0&&lasers.length===0&&enemies.length===0&&pistons.length===0&&keys.length===0){
     container.innerHTML=`
       <div style="text-align:center;padding:40px 20px">
         <span class="material-symbols-outlined" style="font-size:48px;color:#e8e2ce">link_off</span>
         <p class="text-sm text-text-light-muted mt-3">No hay elementos vinculables en el mapa.</p>
-        <p class="text-xs text-text-light-muted mt-1">Coloca interruptores (S), placas (o), NPCs (N) o laseres (L) en la pestana Mapa para configurar vinculos.</p>
+        <p class="text-xs text-text-light-muted mt-1">Coloca interruptores (S), placas (o), NPCs (N), llaves (k) o laseres (L) en la pestana Mapa para configurar vinculos.</p>
       </div>`;
   }
 }
@@ -763,12 +869,13 @@ function syncLinks(type, positions, linksArr){
   // Add entries for new positions
   positions.forEach(p=>{
     if(!linksArr.some(l=>l.x===p.x&&l.y===p.y)){
-      if(type==='switch') linksArr.push({x:p.x,y:p.y,targets:[]});
-      else if(type==='plate') linksArr.push({x:p.x,y:p.y,cajasRequeridas:1,targets:[]});
-      else if(type==='npc') linksArr.push({x:p.x,y:p.y,requiredItems:[],targets:[]});
-      else if(type==='laser') linksArr.push({x:p.x,y:p.y,dir:'norte',active:true});
-      else if(type==='enemy') linksArr.push({x:p.x,y:p.y,dir:'derecha',active:true,targets:[],patrolMode:'bounce',speed:1});
-      else if(type==='piston') linksArr.push({x:p.x,y:p.y,dir:'derecha',active:false,sticky:false,targets:[]});
+      if(type==='switch') linksArr.push({x:p.x,y:p.y,targets:[],displayName:''});
+      else if(type==='plate') linksArr.push({x:p.x,y:p.y,cajasRequeridas:1,targets:[],displayName:''});
+      else if(type==='npc') linksArr.push({x:p.x,y:p.y,requiredItems:[],targets:[],displayName:''});
+      else if(type==='laser') linksArr.push({x:p.x,y:p.y,dir:'norte',active:true,displayName:''});
+      else if(type==='enemy') linksArr.push({x:p.x,y:p.y,dir:'derecha',active:true,targets:[],patrolMode:'bounce',speed:1,displayName:''});
+      else if(type==='piston') linksArr.push({x:p.x,y:p.y,dir:'derecha',active:false,sticky:false,targets:[],displayName:''});
+      else if(type==='key') linksArr.push({x:p.x,y:p.y,targets:[],displayName:''});
     }
   });
 }
@@ -786,12 +893,13 @@ function createSection(title,icon,color,hint){
   return div;
 }
 
-function createLinkCard(label,pos,icon,bg,fg){
+function createLinkCard(label,pos,icon,bg,fg,displayName){
   const card=document.createElement('div');
   card.className='link-card';
   const header=document.createElement('div');
   header.className='link-card-header';
-  header.innerHTML=`<div class="icon-badge" style="background:${bg};color:${fg};border:1px solid ${fg}30"><span class="material-symbols-outlined">${icon}</span></div>${label} <span style="font-weight:400;color:#9c8749;font-size:12px">(${pos.x}, ${pos.y})</span>`;
+  const nameStr=displayName?` — <span style="color:#1c180d;font-style:italic">${displayName}</span>`:'';
+  header.innerHTML=`<div class="icon-badge" style="background:${bg};color:${fg};border:1px solid ${fg}30"><span class="material-symbols-outlined">${icon}</span></div>${label} <span style="font-weight:400;color:#9c8749;font-size:12px">(${pos.x}, ${pos.y})</span>${nameStr}`;
   card.appendChild(header);
   return card;
 }
@@ -803,7 +911,14 @@ function createTargetChip(ch,pos,linkData,type){
   chip.className='target-chip'+(isSelected?' selected':'');
   const icon=cellIcon(ch);
   const label=cellLabel(ch);
-  chip.innerHTML=`<span class="chip-icon material-symbols-outlined">${icon}</span>${label} (${pos.x},${pos.y})`;
+  // Try to find display name for this element
+  let displayName='';
+  if(ch==='K'||ch==='D'){
+    // Check if any key links to this door
+    const keyLink=keyConfigs.find(k=>(k.targets||[]).some(t=>t.x===pos.x&&t.y===pos.y));
+    if(keyLink&&keyLink.displayName) displayName=` [${keyLink.displayName}]`;
+  }
+  chip.innerHTML=`<span class="chip-icon material-symbols-outlined">${icon}</span>${label} (${pos.x},${pos.y})${displayName}`;
   chip.onclick=()=>{
     if(!linkData.targets) linkData.targets=[];
     const idx=linkData.targets.findIndex(t=>t.x===pos.x&&t.y===pos.y&&t.type===type);
@@ -882,6 +997,12 @@ function buildLevelObject(){
     return {x:p.x,y:p.y,dir:cfg.dir,active:cfg.active||false,sticky:cfg.sticky||false,targets:(cfg.targets||[]).map(t=>({x:t.x,y:t.y}))};
   });
 
+  const keys=findElements('k');
+  if(keys.length>0) data.keys=keys.map((k,i)=>{
+    const cfg=keyConfigs.find(c=>c.x===k.x&&c.y===k.y)||{targets:[],displayName:''};
+    return {x:k.x,y:k.y,targets:(cfg.targets||[]).map(t=>({x:t.x,y:t.y})),displayName:cfg.displayName||''};
+  });
+
   return data;
 }
 
@@ -896,13 +1017,27 @@ function playCustomLevel(){
   if(targets.length===0){alert('Coloca al menos una meta (X) en el mapa.');return;}
 
   const levelData=buildLevelObject();
-  // Save to localStorage — works with file:// protocol, no CORS needed
+  console.log('Level data to save:', levelData);
+  
+  // Save to localStorage
   try{
-    localStorage.setItem('devme_custom_level',JSON.stringify(levelData));
+    const jsonData = JSON.stringify(levelData);
+    localStorage.setItem('devme_custom_level', jsonData);
+    console.log('Level saved to localStorage, size:', jsonData.length);
+    
+    // Verify it was saved
+    const saved = localStorage.getItem('devme_custom_level');
+    if(!saved){
+      alert('Error: No se pudo guardar el nivel en localStorage. Esto puede deberse al protocolo file://. Intenta usar un servidor web local.');
+      return;
+    }
+    console.log('Level verified in localStorage');
+    
     // Navigate to the game page
     window.location.href='index.html?custom=1';
   }catch(e){
-    alert('Error al guardar el nivel: '+e.message);
+    console.error('Error saving level:', e);
+    alert('Error al guardar el nivel: '+e.message+'\n\nEsto puede deberse al protocolo file://. Intenta usar un servidor web local o abre los archivos desde un servidor.');
   }
 }
 
@@ -929,6 +1064,7 @@ function generateCode(){
   if(data.npcs) code+=`,\n    npcs:${jsStr(data.npcs)}`;
   if(data.enemies) code+=`,\n    enemies:${jsStr(data.enemies)}`;
   if(data.pistons) code+=`,\n    pistons:${jsStr(data.pistons)}`;
+  if(data.keys) code+=`,\n    keys:${jsStr(data.keys)}`;
   if(data.boxesToCollect) code+=`,\n    boxesToCollect: ${data.boxesToCollect}`;
   code+='\n  }';
   document.getElementById('code-output').textContent=code;
@@ -970,7 +1106,8 @@ function importLevel(){
     npcConfigs=(level.npcs||[]).map(n=>({x:n.x,y:n.y,requiredItems:n.requiredItems||[],targets:n.targets||[]}));
     laserConfigs=(level.lasers||[]).map(l=>({x:l.x,y:l.y,dir:l.dir||'norte',active:l.active!==undefined?l.active:true}));
     enemyConfigs=(level.enemies||[]).map(e=>({x:e.x,y:e.y,dir:e.dir||'derecha',active:e.active!==undefined?e.active:true,targets:e.targets||[],patrolMode:e.patrolMode||'bounce',speed:e.speed||1}));
-    pistonConfigs=(level.pistons||[]).map(p=>({x:p.x,y:p.y,dir:p.dir||'derecha',active:p.active||false,sticky:p.sticky||false,targets:p.targets||[]}));
+    pistonConfigs=(level.pistons||[]).map(p=>({x:p.x,y:p.y,dir:p.dir||'derecha',active:p.active||false,sticky:p.sticky||false,targets:p.targets||[],displayName:''}));
+    keyConfigs=(level.keys||[]).map(k=>({x:k.x,y:k.y,targets:k.targets||[],displayName:k.displayName||''}));
     renderGrid(); updatePreview(); switchTab('grid');
     alert('Nivel importado correctamente.');
   }catch(e){alert('Error al importar: '+e.message);}
@@ -984,7 +1121,7 @@ function saveToStorage(){
     hints:document.getElementById('level-hints').value,starGold:document.getElementById('star-gold').value,
     starSilver:document.getElementById('star-silver').value,starter:document.getElementById('level-starter').value,
     dir:document.getElementById('player-dir').value,
-    switchLinks,plateLinks,npcConfigs,laserConfigs,enemyConfigs,pistonConfigs};
+    switchLinks,plateLinks,npcConfigs,laserConfigs,enemyConfigs,pistonConfigs,keyConfigs};
   try{localStorage.setItem('devme_level_editor',JSON.stringify(data));alert('Nivel guardado.');}
   catch(e){alert('Error al guardar: '+e.message);}
 }
@@ -1001,7 +1138,7 @@ function loadFromStorage(){
     document.getElementById('star-silver').value=d.starSilver||20;document.getElementById('level-starter').value=d.starter||'';
     document.getElementById('player-dir').value=d.dir||'derecha';
     switchLinks=d.switchLinks||[];plateLinks=d.plateLinks||[];npcConfigs=d.npcConfigs||[];laserConfigs=d.laserConfigs||[];
-    enemyConfigs=d.enemyConfigs||[];pistonConfigs=d.pistonConfigs||[];
+    enemyConfigs=d.enemyConfigs||[];pistonConfigs=d.pistonConfigs||[];keyConfigs=d.keyConfigs||[];
     renderGrid();updatePreview();alert('Nivel cargado.');
   }catch(e){alert('Error al cargar: '+e.message);}
 }
@@ -1095,7 +1232,7 @@ function toggleLinkMode(){
   if(btn) btn.classList.toggle('active',linkMode);
   const hint=document.getElementById('link-mode-hint');
   if(linkMode){
-    if(hint){hint.style.display='';hint.textContent='Modo enlace: haz clic en un interruptor, placa, NPC o laser para vincularlo';}
+    if(hint){hint.style.display='';hint.textContent='Modo enlace: haz clic en un interruptor, placa, NPC, laser o llave para vincularlo';}
     selectedActivator=null;
     hideFloatPanel();
   } else {
@@ -1135,6 +1272,10 @@ function getActivatorInfo(x,y,ch){
     const idx=pistonConfigs.findIndex(l=>l.x===x&&l.y===y);
     return {type:'piston',label:'G',idx:idx>=0?idx:pistonConfigs.length};
   }
+  if(ch==='k'){
+    const idx=keyConfigs.findIndex(l=>l.x===x&&l.y===y);
+    return {type:'key',label:'K',idx:idx>=0?idx:keyConfigs.length};
+  }
   return null;
 }
 function getTargetInfo(x,y,ch){
@@ -1173,8 +1314,13 @@ function ensureLinkData(type,x,y){
   }
   if(type==='piston'){
     let idx=pistonConfigs.findIndex(l=>l.x===x&&l.y===y);
-    if(idx<0){ pistonConfigs.push({x,y,dir:'derecha',active:false,sticky:false,targets:[]}); idx=pistonConfigs.length-1; }
+    if(idx<0){ pistonConfigs.push({x,y,dir:'derecha',active:false,sticky:false,targets:[],displayName:''}); idx=pistonConfigs.length-1; }
     return pistonConfigs[idx];
+  }
+  if(type==='key'){
+    let idx=keyConfigs.findIndex(l=>l.x===x&&l.y===y);
+    if(idx<0){ keyConfigs.push({x,y,targets:[],displayName:''}); idx=keyConfigs.length-1; }
+    return keyConfigs[idx];
   }
   return null;
 }
@@ -1219,6 +1365,12 @@ function toggleLinkTarget(tx,ty,targetType){
       if(idx>=0) linkData.targets.splice(idx,1);
       else linkData.targets.push({x:tx,y:ty,type:'door'});
     }
+  } else if(selectedActivator.type==='key'){
+    // Keys link to locked doors
+    if(!linkData.targets) linkData.targets=[];
+    const idx=linkData.targets.findIndex(t=>t.x===tx&&t.y===ty);
+    if(idx>=0) linkData.targets.splice(idx,1);
+    else linkData.targets.push({x:tx,y:ty,type:'door'});
   } else {
     // Switches, plates link to doors/lasers/enemies/pistons
     if(!linkData.targets) linkData.targets=[];
@@ -1239,6 +1391,11 @@ function isTargetLinked(tx,ty){
     // Check if this is a door target
     return (cfg.targets||[]).some(t=>t.x===tx&&t.y===ty);
   }
+  if(selectedActivator.type==='key'){
+    const cfg=keyConfigs.find(c=>c.x===selectedActivator.x&&c.y===selectedActivator.y);
+    if(!cfg) return false;
+    return (cfg.targets||[]).some(t=>t.x===tx&&t.y===ty);
+  }
   let linkData;
   if(selectedActivator.type==='switch') linkData=switchLinks.find(l=>l.x===selectedActivator.x&&l.y===selectedActivator.y);
   else if(selectedActivator.type==='plate') linkData=plateLinks.find(l=>l.x===selectedActivator.x&&l.y===selectedActivator.y);
@@ -1255,13 +1412,17 @@ function showFloatPanel(type,x,y,linkData){
   const title=document.getElementById('flp-title');
   const body=document.getElementById('flp-body');
   if(!panel) return;
-  const labels={switch:'Interruptor',plate:'Placa de presion',npc:'NPC',laser:'Laser',enemy:'Enemigo',piston:'Piston'};
-  const icons={switch:'toggle_on',plate:'radio_button_checked',npc:'face',laser:'flash_on',enemy:'dangerous',piston:'precision_manufacturing'};
+  const labels={switch:'Interruptor',plate:'Placa de presion',npc:'NPC',laser:'Laser',enemy:'Enemigo',piston:'Piston',key:'Llave'};
+  const icons={switch:'toggle_on',plate:'radio_button_checked',npc:'face',laser:'flash_on',enemy:'dangerous',piston:'precision_manufacturing',key:'key'};
   const color=LINK_COLORS[type]||'#888';
   icon.innerHTML=`<span class="material-symbols-outlined">${icons[type]}</span>`;
   icon.style.background=color+'22';icon.style.color=color;
-  title.textContent=`${labels[type]} (${x}, ${y})`;
+  const nameSuffix=linkData.displayName?` — ${linkData.displayName}`:'';
+  title.textContent=`${labels[type]} (${x}, ${y})${nameSuffix}`;
   let html='';
+  // Add name field at the top for all types
+  html+=`<div style="margin-bottom:8px"><label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9c8749;display:block;margin-bottom:2px">Nombre</label>`;
+  html+=`<input type="text" placeholder="Nombre descriptivo" value="${linkData.displayName||''}" class="config-input" style="width:100%;padding:3px 6px;font-size:12px" onchange="ensureLinkData('${type}',${x},${y}).displayName=this.value;showFloatPanel('${type}',${x},${y},ensureLinkData('${type}',${x},${y}))"></div>`;
   if(type==='switch'||type==='plate'){
     const doors=[...findElements('D'),...findElements('K')];
     const lasers=findElements('L');
@@ -1363,6 +1524,19 @@ function showFloatPanel(type,x,y,linkData){
     });
     html+=`</select>`;
     html+=`<div style="margin-top:8px"><label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" ${linkData.sticky?'checked':''} onchange="ensureLinkData('piston',${x},${y}).sticky=this.checked"> Pegajoso (atrae)</label></div>`;
+  } else if(type==='key'){
+    html+=`<div class="flp-section-title">Nombre de la llave</div>`;
+    html+=`<input type="text" placeholder="Ej: Llave maestra" value="${linkData.displayName||''}" class="config-input" style="width:100%;padding:3px 6px;font-size:12px" onchange="ensureLinkData('key',${x},${y}).displayName=this.value">`;
+    html+=`<div class="flp-section-title">Puerta bloqueada que abre (clic para vincular)</div>`;
+    const lockedDoors=[...findElements('K')];
+    if(lockedDoors.length>0){
+      html+='<div style="display:flex;flex-wrap:wrap;gap:2px">';
+      lockedDoors.forEach(d=>{
+        const linked=(linkData.targets||[]).some(t=>t.x===d.x&&t.y===d.y);
+        html+=`<span class="flp-chip${linked?' selected':''}" onclick="toggleLinkTarget(${d.x},${d.y},'door')"><span class="material-symbols-outlined" style="font-size:14px">lock</span>P. Bloqueada (${d.x},${d.y})</span>`;
+      });
+      html+='</div>';
+    } else html+='<div class="flp-empty">No hay puertas bloqueadas (K) en el mapa</div>';
   }
   body.innerHTML=html;
   panel.classList.add('visible');
@@ -1404,6 +1578,9 @@ function drawLinkLines(){
       const doorTargets=(cfg.targets||[]).map(t=>({x:t.x,y:t.y}));
       targets=targets.concat(doorTargets);
     }
+  } else if(selectedActivator.type==='key'){
+    const cfg=keyConfigs.find(c=>c.x===selectedActivator.x&&c.y===selectedActivator.y);
+    if(cfg) targets=(cfg.targets||[]).map(t=>({x:t.x,y:t.y}));
   }
   let lines='';
   targets.forEach(t=>{

@@ -452,10 +452,11 @@ FinAlgoritmo`,
   {
     id:16,
     name:"Mi nivel",
-    desc:"Prueba del piston pegajoso",
+    desc:"Prueba del piston pegajoso y llaves vinculadas",
     goals:["Llegar a la meta"],
     hints:[
-      "Usa avanzar() para moverte."
+      "Usa avanzar() para moverte.",
+      "Recoge la llave y usala para abrir la puerta bloqueada."
     ],
     starThresholds:{ gold: 10, silver: 20 },
     starter:
@@ -463,17 +464,17 @@ FinAlgoritmo`,
     // Escribe tu codigo aqui
 FinAlgoritmo`,
     grid:[
-      "........",
-      "........",
-      "PSGB..X.",
-      "........",
-      "........",
-      "........",
-      "........"
+      "########",
+      "#Pi#...#",
+      "#k.#.#K#",
+      "##.#K#.#",
+      "##...#.#",
+      "###N##X#",
+      "########"
     ],
     dir:'derecha',
-    switches:[{'x':1,'y':2,'targets':[{'x':2,'y':2,'type':'piston'}]}],
-    pistons:[{'x':2,'y':2,'dir':'este','active':false,'sticky':true,'targets':[{'x':1,'y':2}]}]
+    npcs:[{'x':3,'y':5,'requiredItems':['item'],'targets':[{'x':4,'y':3}]}],
+    keys:[{'x':1,'y':2,'targets':[{'x':6,'y':2}],'displayName':'Llave dorada'}]
   }
 ];
 
@@ -586,6 +587,20 @@ function buildLevel(def){
       if(lasers[i]){
         lasers[i].dir = l.dir || 'este';
         lasers[i].active = l.active !== undefined ? l.active : true;
+      }
+    });
+  }
+
+  // Asociar llaves con puertas (key-door linking)
+  if(def.keys){
+    def.keys.forEach((k) => {
+      // Find the item that corresponds to this key position
+      const item = items.find(it => it.x === k.x && it.y === k.y && it.type === 'llave');
+      if(item && k.targets && k.targets.length > 0){
+        item.linkedDoor = { x: k.targets[0].x, y: k.targets[0].y };
+      }
+      if(item && k.displayName){
+        item.displayName = k.displayName;
       }
     });
   }

@@ -472,10 +472,17 @@ gameSpeed.addEventListener('input', ()=>{
 (function loadCustomLevel(){
   const params = new URLSearchParams(window.location.search);
   if(params.get('custom')!=='1') return false;
+  console.log('Custom level parameter detected, attempting to load...');
   try{
     const raw = localStorage.getItem('devme_custom_level');
-    if(!raw) return false;
+    if(!raw){
+      console.error('No custom level data found in localStorage');
+      alert('No se encontro ningun nivel personalizado. Asegurate de haber creado un nivel en el editor primero.');
+      return false;
+    }
+    console.log('Custom level data found, size:', raw.length);
     const data = JSON.parse(raw);
+    console.log('Custom level parsed:', data);
     // Add as a temporary level at the end
     data.id = data.id || 999;
     data.name = data.name || 'Nivel Personalizado';
@@ -486,14 +493,17 @@ gameSpeed.addEventListener('input', ()=>{
     data.starter = data.starter || 'Algoritmo Nivel\n    // Escribe tu codigo aqui\nFinAlgoritmo';
     LEVELS.push(data);
     currentLevelIdx = LEVELS.length - 1;
+    console.log('Loading level at index:', currentLevelIdx);
     loadLevel(currentLevelIdx);
     // Switch to game tab
     const gameTab = document.querySelector('[data-main-tab="game"]');
     if(gameTab) gameTab.click();
     window.__customLevelLoaded = true;
+    console.log('Custom level loaded successfully');
     return true;
   }catch(e){
     console.error('Error loading custom level:', e);
+    alert('Error al cargar el nivel personalizado: '+e.message);
     return false;
   }
 })();
