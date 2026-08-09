@@ -74,9 +74,78 @@ function makeRenderer(canvas){
   let sayMsg = null;
   let sayTimer = 0;
 
+  // ============= ANIMATION SYSTEM =============
+  const entityAnims = new Map(); // entity -> {fromX, fromY, startTime, duration}
+  let animLoopId = null;
+  let defaultAnimDuration = 200; // ms
+
+  function setAnimDuration(ms){
+    defaultAnimDuration = Math.max(30, ms);
+  }
+
+  function animateEntity(entity, fromX, fromY, duration){
+    if(!entity) return;
+    if(entity.x === fromX && entity.y === fromY) return;
+    entityAnims.set(entity, {
+      fromX: fromX,
+      fromY: fromY,
+      startTime: performance.now(),
+      duration: duration || defaultAnimDuration
+    });
+    ensureAnimLoop();
+  }
+
+  function ensureAnimLoop(){
+    if(animLoopId) return;
+    function loop(){
+      const now = performance.now();
+      let hasActive = false;
+      for(const [entity, anim] of entityAnims){
+        if(now - anim.startTime >= anim.duration){
+          entityAnims.delete(entity);
+        } else {
+          hasActive = true;
+        }
+      }
+      render();
+      if(hasActive){
+        animLoopId = requestAnimationFrame(loop);
+      } else {
+        animLoopId = null;
+      }
+    }
+    animLoopId = requestAnimationFrame(loop);
+  }
+
+  function getVisualPos(entity){
+    if(!entity) return {x:0, y:0};
+    const anim = entityAnims.get(entity);
+    if(!anim) return { x: entity.x, y: entity.y };
+    const elapsed = performance.now() - anim.startTime;
+    const t = Math.min(1, elapsed / anim.duration);
+    if(t >= 1){
+      entityAnims.delete(entity);
+      return { x: entity.x, y: entity.y };
+    }
+    // Ease out cubic
+    const e = 1 - Math.pow(1 - t, 3);
+    return {
+      x: anim.fromX + (entity.x - anim.fromX) * e,
+      y: anim.fromY + (entity.y - anim.fromY) * e
+    };
+  }
+
+  function stopAllAnims(){
+    entityAnims.clear();
+    if(animLoopId){
+      cancelAnimationFrame(animLoopId);
+      animLoopId = null;
+    }
+  }
+
   loadImages();
 
-  function setWorld(w){ world = w; resize(); render(); }
+  function setWorld(w){ world = w; stopAllAnims(); resize(); render(); }
 
   function resize(){
     const parent = canvas.parentElement;
@@ -131,7 +200,8 @@ function makeRenderer(canvas){
 
     // paredes
     for(const w of world.walls){
-      const px = offX+w.x*cell, py = offY+w.y*cell;
+      const vp = getVisualPos(w);
+      const px = offX+vp.x*cell, py = offY+vp.y*cell;
       if(IMAGES.wall){
         ctx.drawImage(IMAGES.wall, px, py, cell, cell);
       } else {
@@ -373,14 +443,15 @@ function makeRenderer(canvas){
     }
 
     // cajas en el suelo
-    for(const b of world.boxes) drawBox(offX+b.x*cell, offY+b.y*cell, false);
+    for(const b of world.boxes){ const vp = getVisualPos(b); drawBox(offX+vp.x*cell, offY+vp.y*cell, false); }
     // cajas entregadas (sobre metas)
     for(const b of world.deliveredAt) drawBox(offX+b.x*cell, offY+b.y*cell, true);
 
     // enemigos
     if(world.enemies){
       for(const enemy of world.enemies){
-        const px = offX+enemy.x*cell, py = offY+enemy.y*cell;
+        const vp = getVisualPos(enemy);
+        const px = offX+vp.x*cell, py = offY+vp.y*cell;
         const cx = px+cell/2, cy = py+cell/2;
         if(enemy.defeated){
           // Enemigo derrotado: gris, tachado
@@ -491,7 +562,8 @@ function makeRenderer(canvas){
     }
 
     // jugador
-    drawPlayer(offX + world.player.x*cell, offY + world.player.y*cell, world.player.dir, world.player.carrying);
+    const playerVP = getVisualPos(world.player);
+    drawPlayer(offX + playerVP.x*cell, offY + playerVP.y*cell, world.player.dir, world.player.carrying);
 
     // Indicador de inventario (pila)
     drawInventory(offX, offY, world);
@@ -499,8 +571,9 @@ function makeRenderer(canvas){
     // burbuja de diálogo
     if(sayMsg && Date.now() < sayTimer){
       const p = world.player;
-      const px = offX + p.x*cell + cell/2;
-      const py = offY + p.y*cell - 8;
+      const pvp = getVisualPos(p);
+      const px = offX + pvp.x*cell + cell/2;
+      const py = offY + pvp.y*cell - 8;
       drawBubble(px, py, sayMsg);
     }
   }
@@ -641,7 +714,7 @@ function makeRenderer(canvas){
 
   window.addEventListener('resize', ()=>{ resize(); render(); });
 
-  const api = { setWorld, render, resize, sayBubble };
+  const api = { setWorld, render, resize, sayBubble, animateEntity, setAnimDuration, stopAllAnims, getVisualPos };
   window.__renderer = api;
   return api;
 }

@@ -20,6 +20,7 @@ let controller = null;
 const renderer = makeRenderer(gameCanvas);
 let highlightLine = -1;
 let userCodeBackup = null;
+let enemyPatrolInterval = null; // idle enemy patrol timer
 
 function tradError(msg){
   const map = {
@@ -68,6 +69,9 @@ function loadLevel(idx, isReset){
   setGameStatus('idle','Listo');
   updateInstrCount(0);
   hideGameOverlay();
+
+  // Start enemy idle patrol
+  startEnemyPatrol();
 
   if (!isReset && def.starter && typeof window.loadStarterCode === 'function') {
     window.loadStarterCode(def.starter);
@@ -210,6 +214,12 @@ function gameLog(msg, cls){
 // -------------- Ejecucion del juego --------------
 async function runGameProgram(){
   if(controller) return;
+  // Stop enemy patrol and reset enemies to original positions
+  stopEnemyPatrol();
+  resetEnemiesToOrigin();
+  // Small delay to let the return animation play
+  await new Promise(r => setTimeout(r, 350));
+  
   const consoleEl = $('console');
   if(consoleEl) consoleEl.innerHTML = '';
   // Reiniciar mundo desde estado inicial
@@ -254,6 +264,12 @@ async function runGameProgram(){
     checkGoals: ()=>{ updateGoalsUI(); return checkGoalsSilent(); },
     checkGoalsSilent: ()=> checkGoalsSilent(),
     sayBubble: (m)=>{ renderer.sayBubble(m); },
+    animateEntity: (entity, fromX, fromY)=>{
+      const delay = 850 - parseInt(gameSpeed.value,10);
+      const duration = Math.max(50, Math.min(350, delay * 0.65));
+      renderer.setAnimDuration(duration);
+      renderer.animateEntity(entity, fromX, fromY, duration);
+    },
     read: (varName)=>{
       // Mostrar input line y esperar respuesta
       return new Promise((resolve, reject) => {
@@ -360,6 +376,8 @@ async function runGameProgram(){
     $('btn-pause').querySelector('.material-symbols-outlined').textContent = 'pause';
     $('btn-pause').dataset.paused = 'false';
     window.__gameState = null;
+    // Restart enemy patrol after game ends
+    startEnemyPatrol();
   }
 }
 
@@ -375,7 +393,67 @@ function togglePauseGame(){
 function resetGame(){
   if(controller) controller.abort();
   if(window.__gameState && window.__gameState.paused) window.__gameState.resume();
+  stopEnemyPatrol();
   loadLevel(currentLevelIdx, true);
+}
+
+// ============= ENEMY IDLE PATROL =============
+function startEnemyPatrol(){
+  stopEnemyPatrol();
+  if(!world || !world.enemies || world.enemies.length === 0) return;
+  // Store original positions if not already stored
+  for(const e of world.enemies){
+    if(e.origX === undefined){ e.origX = e.x; e.origY = e.y; e.origDir = e.dir; }
+  }
+  const DELTAS_PATROL = { arriba:[0,-1], derecha:[1,0], abajo:[0,1], izquierda:[-1,0] };
+  enemyPatrolInterval = setInterval(()=>{
+    if(!world || !world.enemies) return;
+    for(const enemy of world.enemies){
+      if(!enemy.active || enemy.defeated) continue;
+      const [dx,dy] = DELTAS_PATROL[enemy.dir] || [1,0];
+      const nx = enemy.x + dx;
+      const ny = enemy.y + dy;
+      // Check if blocked
+      let blocked = false;
+      if(nx<0 || ny<0 || nx>=world.W || ny>=world.H) blocked = true;
+      if(!blocked && world.walls.some(w => w.x===nx && w.y===ny)) blocked = true;
+      if(!blocked){ const d = world.doors.find(d => d.x===nx && d.y===ny); if(d && !d.open) blocked = true; }
+      if(!blocked && (world.npcs||[]).some(n => n.x===nx && n.y===ny)) blocked = true;
+      if(!blocked && world.boxes.some(b => b.x===nx && b.y===ny)) blocked = true;
+      if(!blocked && (world.pistons||[]).some(p => { if(p.x===nx && p.y===ny) return true; if(p.extended && p.extendX===nx && p.extendY===ny) return true; return false; })) blocked = true;
+      
+      if(blocked){
+        if(enemy.patrolMode === 'bounce'){
+          const opp = {arriba:'abajo', abajo:'arriba', izquierda:'derecha', derecha:'izquierda'};
+          enemy.dir = opp[enemy.dir] || enemy.dir;
+        }
+      } else {
+        renderer.animateEntity(enemy, enemy.x, enemy.y, 300);
+        enemy.x = nx;
+        enemy.y = ny;
+      }
+    }
+    renderer.render();
+  }, 450);
+}
+
+function stopEnemyPatrol(){
+  if(enemyPatrolInterval){
+    clearInterval(enemyPatrolInterval);
+    enemyPatrolInterval = null;
+  }
+}
+
+function resetEnemiesToOrigin(){
+  if(!world || !world.enemies) return;
+  for(const e of world.enemies){
+    if(e.origX !== undefined){
+      renderer.animateEntity(e, e.x, e.y, 300);
+      e.x = e.origX;
+      e.y = e.origY;
+      e.dir = e.origDir || e.dir;
+    }
+  }
 }
 
 function onGameWin(n){

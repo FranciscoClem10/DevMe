@@ -452,11 +452,10 @@ FinAlgoritmo`,
   {
     id:16,
     name:"Mi nivel",
-    desc:"Prueba del piston pegajoso y llaves vinculadas",
+    desc:"Describe el objetivo de este nivel...",
     goals:["Llegar a la meta"],
     hints:[
-      "Usa avanzar() para moverte.",
-      "Recoge la llave y usala para abrir la puerta bloqueada."
+      "Usa avanzar() para moverte."
     ],
     starThresholds:{ gold: 10, silver: 20 },
     starter:
@@ -464,17 +463,20 @@ FinAlgoritmo`,
     // Escribe tu codigo aqui
 FinAlgoritmo`,
     grid:[
-      "########",
-      "#Pi#...#",
-      "#k.#.#K#",
-      "##.#K#.#",
-      "##...#.#",
-      "###N##X#",
-      "########"
+      "........",
+      "iN......",
+      "Pk.....X",
+      "S.KKK...",
+      "........",
+      "..G#.F..",
+      "..GB...."
     ],
-    dir:'derecha',
-    npcs:[{'x':3,'y':5,'requiredItems':['item'],'targets':[{'x':4,'y':3}]}],
-    keys:[{'x':1,'y':2,'targets':[{'x':6,'y':2}],'displayName':'Llave dorada'}]
+    dir:'arriba',
+    switches:[{'x':0,'y':3,'targets':[{'x':2,'y':5,'type':'piston'},{'x':2,'y':6,'type':'piston'},{'x':4,'y':3}]}],
+    npcs:[{'x':1,'y':1,'requiredItems':['item'],'targets':[{'x':3,'y':3}]}],
+    enemies:[{'x':5,'y':5,'dir':'norte','active':true,'targets':[],'patrolMode':'bounce','speed':1}],
+    pistons:[{'x':2,'y':5,'dir':'este','active':false,'sticky':false,'targets':[{'x':0,'y':3}]},{'x':2,'y':6,'dir':'este','active':false,'sticky':true,'targets':[{'x':0,'y':3}]}],
+    keys:[{'x':1,'y':2,'targets':[{'x':2,'y':3}],'displayName':''}]
   }
 ];
 
@@ -554,6 +556,20 @@ function buildLevel(def){
         enemies[i].speed = Math.max(1, Math.min(3, parseInt(e.speed) || 1));
       }
     });
+    // Create enemies defined in def.enemies that don't have a matching grid 'F'
+    for(let i = enemies.length; i < def.enemies.length; i++){
+      const e = def.enemies[i];
+      enemies.push({
+        x: e.x,
+        y: e.y,
+        dir: _normalizeDir(e.dir || 'derecha'),
+        active: e.active !== undefined ? e.active : true,
+        defeated: false,
+        targets: e.targets || [],
+        patrolMode: e.patrolMode || 'bounce',
+        speed: Math.max(1, Math.min(3, parseInt(e.speed) || 1))
+      });
+    }
   }
 
   // Asociar pistones definidos en def.pistons
@@ -603,6 +619,13 @@ function buildLevel(def){
         item.displayName = k.displayName;
       }
     });
+  }
+
+  // Store original positions for enemies (for idle patrol reset)
+  for(const e of enemies){
+    e.origX = e.x;
+    e.origY = e.y;
+    e.origDir = e.dir;
   }
 
   return {

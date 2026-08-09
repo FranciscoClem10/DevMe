@@ -278,11 +278,11 @@ async function doAction(state, line){
   state.instrCount++;
   state.ui.updateCounter(state.instrCount);
   // Mover enemigos activos
-  moveEnemies(state.world, line);
+  moveEnemies(state.world, state, line);
   // Activar pistones activos
   activatePistons(state.world, state, line);
   // Desactivar extensión de pistones inactivos
-  deactivatePistons(state.world);
+  deactivatePistons(state.world, state);
   // Recalcular placas de presión y láseres después de cada acción
   recalcPressurePlates(state.world);
   recalcLaserBeams(state.world);
@@ -420,8 +420,16 @@ function checkLaserDeath(world, line){
 }
 
 // ============= ENEMIGOS =============
-function moveEnemies(world, line){
+function moveEnemies(world, stateOrLine, line){
   if(!world.enemies) return;
+  // Support both old signature (world, line) and new (world, state, line)
+  let state = null;
+  if(typeof stateOrLine === 'object' && stateOrLine !== null && stateOrLine.ui){
+    state = stateOrLine;
+  } else {
+    line = stateOrLine;
+  }
+  const ui = state ? state.ui : null;
   for(const enemy of world.enemies){
     if(!enemy.active || enemy.defeated) continue;
     // Mover el enemigo segun su velocidad (1-3 veces por tick)
@@ -440,6 +448,7 @@ function moveEnemies(world, line){
         // Si es patrulla fija, simplemente no se mueve mas este tick
         break;
       }
+      if(ui && ui.animateEntity) ui.animateEntity(enemy, enemy.x, enemy.y);
       enemy.x = nx;
       enemy.y = ny;
     }
@@ -507,16 +516,28 @@ function activatePistons(world, state, line){
         piston.stuckBoxOrigX = world.boxes[boxIdx].x;
         piston.stuckBoxOrigY = world.boxes[boxIdx].y;
       }
+      if(state && state.ui && state.ui.animateEntity){
+        state.ui.animateEntity(world.boxes[boxIdx], world.boxes[boxIdx].x, world.boxes[boxIdx].y);
+      }
       world.boxes[boxIdx].x = beyondX;
       world.boxes[boxIdx].y = beyondY;
     }
     
     // Empujar muros (si la casilla más allá está libre)
-    const wallIdx = world.walls.findIndex(w => w.x===frontX && w.y===frontY);
-    if(wallIdx >= 0 && !_isOccupied(world, beyondX, beyondY)){
-      world.walls[wallIdx].x = beyondX;
-      world.walls[wallIdx].y = beyondY;
-    }
+     const wallIdx = world.walls.findIndex(w => w.x===frontX && w.y===frontY);
+     if(wallIdx >= 0 && !_isOccupied(world, beyondX, beyondY)){
+       // Recordar posición original para retracción del pistón pegajoso
+       if(piston.sticky){
+         piston.stuckWall = wallIdx;
+         piston.stuckWallOrigX = world.walls[wallIdx].x;
+         piston.stuckWallOrigY = world.walls[wallIdx].y;
+       }
+       if(state && state.ui && state.ui.animateEntity){
+         state.ui.animateEntity(world.walls[wallIdx], world.walls[wallIdx].x, world.walls[wallIdx].y);
+       }
+       world.walls[wallIdx].x = beyondX;
+       world.walls[wallIdx].y = beyondY;
+     }
     
     // También puede empujar al jugador
     if(world.player.x===frontX && world.player.y===frontY && !_isOccupied(world, beyondX, beyondY)){
@@ -525,6 +546,9 @@ function activatePistons(world, state, line){
         piston.stuckPlayerOrigX = world.player.x;
         piston.stuckPlayerOrigY = world.player.y;
       }
+      if(state && state.ui && state.ui.animateEntity){
+        state.ui.animateEntity(world.player, world.player.x, world.player.y);
+      }
       world.player.x = beyondX;
       world.player.y = beyondY;
     }
@@ -532,24 +556,25 @@ function activatePistons(world, state, line){
 }
 
 // Desactivar extensión de pistones inactivos
-function deactivatePistons(world){
+function deactivatePistons(world, state){
   if(!world.pistons) return;
   for(const piston of world.pistons){
     if(!piston.active){
-      // Pistón pegajoso: al retraerse, atrae el bloque/jugador de vuelta a su posición original
+      // Pistón pegajoso: al retraerse, atrae el bloque/jugador/muro de vuelta a su posición original
       if(piston.sticky && piston.extended){
         const [dx,dy] = DELTAS[piston.dir] || [1,0];
         const frontX = piston.x + dx;
         const frontY = piston.y + dy;
+        const ui = state ? state.ui : null;
         
         // Traer de vuelta la caja empujada previamente
         if(piston.stuckBox !== undefined && piston.stuckBox !== null){
           const boxIdx = piston.stuckBox;
           if(boxIdx >= 0 && boxIdx < world.boxes.length){
-            // Solo traer de vuelta si la caja sigue en la posición empujada (frente extendido + 1)
             const pushedX = frontX + dx;
             const pushedY = frontY + dy;
             if(world.boxes[boxIdx].x === pushedX && world.boxes[boxIdx].y === pushedY){
+              if(ui && ui.animateEntity) ui.animateEntity(world.boxes[boxIdx], world.boxes[boxIdx].x, world.boxes[boxIdx].y);
               world.boxes[boxIdx].x = piston.stuckBoxOrigX;
               world.boxes[boxIdx].y = piston.stuckBoxOrigY;
             }
@@ -559,11 +584,29 @@ function deactivatePistons(world){
           piston.stuckBoxOrigY = null;
         }
         
+        // Traer de vuelta el muro empujado previamente
+        if(piston.stuckWall !== undefined && piston.stuckWall !== null){
+          const wallIdx = piston.stuckWall;
+          if(wallIdx >= 0 && wallIdx < world.walls.length){
+            const pushedX = frontX + dx;
+            const pushedY = frontY + dy;
+            if(world.walls[wallIdx].x === pushedX && world.walls[wallIdx].y === pushedY){
+              if(ui && ui.animateEntity) ui.animateEntity(world.walls[wallIdx], world.walls[wallIdx].x, world.walls[wallIdx].y);
+              world.walls[wallIdx].x = piston.stuckWallOrigX;
+              world.walls[wallIdx].y = piston.stuckWallOrigY;
+            }
+          }
+          piston.stuckWall = null;
+          piston.stuckWallOrigX = null;
+          piston.stuckWallOrigY = null;
+        }
+        
         // Traer de vuelta al jugador empujado previamente
         if(piston.stuckPlayer){
           const pushedX = frontX + dx;
           const pushedY = frontY + dy;
           if(world.player.x === pushedX && world.player.y === pushedY){
+            if(ui && ui.animateEntity) ui.animateEntity(world.player, world.player.x, world.player.y);
             world.player.x = piston.stuckPlayerOrigX;
             world.player.y = piston.stuckPlayerOrigY;
           }
@@ -662,9 +705,11 @@ const BUILTINS = {
     if(isWall(w, x, y)) throw RuntimeError('No se puede avanzar: hay un muro o pared adelante', line);
     // Verificar láser en casilla destino
     if(w.laserBeams && w.laserBeams.some(b => b.x===x && b.y===y)){
+      if(state.ui.animateEntity) state.ui.animateEntity(w.player, w.player.x, w.player.y);
       w.player.x = x; w.player.y = y;
       throw RuntimeError('¡El jugador ha entrado en un haz de láser!', line);
     }
+    if(state.ui.animateEntity) state.ui.animateEntity(w.player, w.player.x, w.player.y);
     w.player.x = x;
     w.player.y = y;
     await doAction(state, line);
@@ -700,9 +745,11 @@ const BUILTINS = {
       throw RuntimeError('No se puede empujar la caja hacia un haz de láser', line);
     }
     // Mover la caja
+    if(state.ui.animateEntity) state.ui.animateEntity(w.boxes[boxIdx], w.boxes[boxIdx].x, w.boxes[boxIdx].y);
     w.boxes[boxIdx].x = behindX;
     w.boxes[boxIdx].y = behindY;
     // Mover el jugador a la casilla de la caja
+    if(state.ui.animateEntity) state.ui.animateEntity(w.player, w.player.x, w.player.y);
     w.player.x = x;
     w.player.y = y;
     await doAction(state, line);
