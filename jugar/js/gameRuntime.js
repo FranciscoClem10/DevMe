@@ -277,11 +277,19 @@ function formatValue(v){
 async function doAction(state, line){
   state.instrCount++;
   state.ui.updateCounter(state.instrCount);
+  // Mover enemigos activos
+  moveEnemies(state.world, line);
+  // Activar pistones activos
+  activatePistons(state.world, state, line);
+  // Desactivar extensión de pistones inactivos
+  deactivatePistons(state.world);
   // Recalcular placas de presión y láseres después de cada acción
   recalcPressurePlates(state.world);
   recalcLaserBeams(state.world);
   // Verificar si el jugador está en un haz de láser
   checkLaserDeath(state.world, line);
+  // Verificar colisión con enemigos
+  checkEnemyDeath(state.world, line);
   // Auto-diálogo: si el jugador está adyacente a un NPC y lo mira, mostrar diálogo
   autoNPCDialog(state);
   state.ui.render();
@@ -315,12 +323,6 @@ function autoNPCDialog(state){
       needs.push('necesito: ' + remaining.join(', '));
     }
   }
-  if(npc.requiredBoxes > 0){
-    const remainingBoxes = npc.requiredBoxes - npc.received.boxes;
-    if(remainingBoxes > 0){
-      needs.push('necesito ' + remainingBoxes + ' caja(s)');
-    }
-  }
   if(needs.length === 0){
     msg += '¡Gracias! Ya tengo todo.';
   } else {
@@ -340,8 +342,16 @@ function isWall(world, x, y){
   if(world.walls.some(w => w.x===x && w.y===y)) return true;
   const d = world.doors.find(d => d.x===x && d.y===y);
   if(d && !d.open) return true;
-  // Los NPCs bloquean el paso (no se puede caminar sobre ellos)
+  // Los NPCs bloquean el paso
   if((world.npcs || []).some(n => n.x===x && n.y===y)) return true;
+  // Los enemigos activos bloquean el paso
+  if((world.enemies || []).some(e => e.x===x && e.y===y && e.active && !e.defeated)) return true;
+  // Los pistones bloquean el paso (base y extensión)
+  if((world.pistons || []).some(p => {
+    if(p.x===x && p.y===y) return true;
+    if(p.extended && p.extendX===x && p.extendY===y) return true;
+    return false;
+  })) return true;
   return false;
 }
 function hasBoxAt(world, x, y){ return world.boxes.some(b => b.x===x && b.y===y); }
@@ -409,6 +419,183 @@ function checkLaserDeath(world, line){
   }
 }
 
+// ============= ENEMIGOS =============
+function moveEnemies(world, line){
+  if(!world.enemies) return;
+  for(const enemy of world.enemies){
+    if(!enemy.active || enemy.defeated) continue;
+    // Mover el enemigo segun su velocidad (1-3 veces por tick)
+    const speed = enemy.speed || 1;
+    for(let step = 0; step < speed; step++){
+      const [dx,dy] = DELTAS[enemy.dir] || [1,0];
+      let nx = enemy.x + dx;
+      let ny = enemy.y + dy;
+      // Verificar si puede moverse (no pared, no puerta cerrada)
+      const blocked = _isEnemyBlocked(world, nx, ny);
+      if(blocked){
+        if(enemy.patrolMode === 'bounce'){
+          // Rebotar: invertir dirección
+          enemy.dir = _oppositeDir(enemy.dir);
+        }
+        // Si es patrulla fija, simplemente no se mueve mas este tick
+        break;
+      }
+      enemy.x = nx;
+      enemy.y = ny;
+    }
+  }
+}
+
+function _isEnemyBlocked(world, x, y){
+  if(x<0 || y<0 || x>=world.W || y>=world.H) return true;
+  if(world.walls.some(w => w.x===x && w.y===y)) return true;
+  const d = world.doors.find(d => d.x===x && d.y===y);
+  if(d && !d.open) return true;
+  if((world.npcs || []).some(n => n.x===x && n.y===y)) return true;
+  if((world.enemies || []).some(e => e.x===x && e.y===y && e.active && !e.defeated)) return true;
+  // Los pistones bloquean al enemigo (base y extensión)
+  if((world.pistons || []).some(p => {
+    if(p.x===x && p.y===y) return true;
+    if(p.extended && p.extendX===x && p.extendY===y) return true;
+    return false;
+  })) return true;
+  // Las cajas bloquean al enemigo
+  if(world.boxes.some(b => b.x===x && b.y===y)) return true;
+  return false;
+}
+
+function _oppositeDir(dir){
+  const map = {arriba:'abajo', abajo:'arriba', izquierda:'derecha', derecha:'izquierda'};
+  return map[dir] || dir;
+}
+
+function checkEnemyDeath(world, line){
+  if(!world.enemies) return;
+  const px = world.player.x, py = world.player.y;
+  for(const enemy of world.enemies){
+    if(!enemy.active || enemy.defeated) continue;
+    if(enemy.x === px && enemy.y === py){
+      throw RuntimeError('¡Un enemigo ha alcanzado al jugador!', line);
+    }
+  }
+}
+
+// ============= PISTONES =============
+function activatePistons(world, state, line){
+  if(!world.pistons) return;
+  for(const piston of world.pistons){
+    if(!piston.active) continue;
+    const [dx,dy] = DELTAS[piston.dir] || [1,0];
+    const frontX = piston.x + dx;
+    const frontY = piston.y + dy;
+
+    // Marcar el pistón como extendido (para el renderer)
+    piston.extended = true;
+    piston.extendX = frontX;
+    piston.extendY = frontY;
+
+    // Tanto pistones normales como pegajosos empujan hacia adelante al activarse
+    const beyondX = frontX + dx;
+    const beyondY = frontY + dy;
+    
+    // Empujar cajas
+    const boxIdx = world.boxes.findIndex(b => b.x===frontX && b.y===frontY);
+    if(boxIdx >= 0 && !_isOccupied(world, beyondX, beyondY)){
+      // Recordar posición original para retracción del pistón pegajoso
+      if(piston.sticky){
+        piston.stuckBox = boxIdx;
+        piston.stuckBoxOrigX = world.boxes[boxIdx].x;
+        piston.stuckBoxOrigY = world.boxes[boxIdx].y;
+      }
+      world.boxes[boxIdx].x = beyondX;
+      world.boxes[boxIdx].y = beyondY;
+    }
+    
+    // Empujar muros (si la casilla más allá está libre)
+    const wallIdx = world.walls.findIndex(w => w.x===frontX && w.y===frontY);
+    if(wallIdx >= 0 && !_isOccupied(world, beyondX, beyondY)){
+      world.walls[wallIdx].x = beyondX;
+      world.walls[wallIdx].y = beyondY;
+    }
+    
+    // También puede empujar al jugador
+    if(world.player.x===frontX && world.player.y===frontY && !_isOccupied(world, beyondX, beyondY)){
+      if(piston.sticky){
+        piston.stuckPlayer = true;
+        piston.stuckPlayerOrigX = world.player.x;
+        piston.stuckPlayerOrigY = world.player.y;
+      }
+      world.player.x = beyondX;
+      world.player.y = beyondY;
+    }
+  }
+}
+
+// Desactivar extensión de pistones inactivos
+function deactivatePistons(world){
+  if(!world.pistons) return;
+  for(const piston of world.pistons){
+    if(!piston.active){
+      // Pistón pegajoso: al retraerse, atrae el bloque/jugador de vuelta a su posición original
+      if(piston.sticky && piston.extended){
+        const [dx,dy] = DELTAS[piston.dir] || [1,0];
+        const frontX = piston.x + dx;
+        const frontY = piston.y + dy;
+        
+        // Traer de vuelta la caja empujada previamente
+        if(piston.stuckBox !== undefined && piston.stuckBox !== null){
+          const boxIdx = piston.stuckBox;
+          if(boxIdx >= 0 && boxIdx < world.boxes.length){
+            // Solo traer de vuelta si la caja sigue en la posición empujada (frente extendido + 1)
+            const pushedX = frontX + dx;
+            const pushedY = frontY + dy;
+            if(world.boxes[boxIdx].x === pushedX && world.boxes[boxIdx].y === pushedY){
+              world.boxes[boxIdx].x = piston.stuckBoxOrigX;
+              world.boxes[boxIdx].y = piston.stuckBoxOrigY;
+            }
+          }
+          piston.stuckBox = null;
+          piston.stuckBoxOrigX = null;
+          piston.stuckBoxOrigY = null;
+        }
+        
+        // Traer de vuelta al jugador empujado previamente
+        if(piston.stuckPlayer){
+          const pushedX = frontX + dx;
+          const pushedY = frontY + dy;
+          if(world.player.x === pushedX && world.player.y === pushedY){
+            world.player.x = piston.stuckPlayerOrigX;
+            world.player.y = piston.stuckPlayerOrigY;
+          }
+          piston.stuckPlayer = false;
+          piston.stuckPlayerOrigX = null;
+          piston.stuckPlayerOrigY = null;
+        }
+      }
+      
+      piston.extended = false;
+      piston.extendX = null;
+      piston.extendY = null;
+    }
+  }
+}
+
+function _isOccupied(world, x, y){
+  if(x<0 || y<0 || x>=world.W || y>=world.H) return true;
+  if(world.walls.some(w => w.x===x && w.y===y)) return true;
+  const d = world.doors.find(d => d.x===x && d.y===y);
+  if(d && !d.open) return true;
+  if(world.boxes.some(b => b.x===x && b.y===y)) return true;
+  if((world.npcs || []).some(n => n.x===x && n.y===y)) return true;
+  // Los pistones bloquean (base y extensión)
+  if((world.pistons || []).some(p => {
+    if(p.x===x && p.y===y) return true;
+    if(p.extended && p.extendX===x && p.extendY===y) return true;
+    return false;
+  })) return true;
+  return false;
+}
+
 // ============= SEÑALES (interruptores, placas, NPCs) =============
 function applySignal(world, targets, activate){
   if(!targets) return;
@@ -417,6 +604,24 @@ function applySignal(world, targets, activate){
       // Los interruptores desactivan los láseres (lógica invertida)
       const laser = (world.lasers||[]).find(l => l.x===t.x && l.y===t.y);
       if(laser) laser.active = !activate;
+    } else if(t.type === 'enemy'){
+      // Desactivar/activar enemigo
+      const enemy = (world.enemies||[]).find(e => e.x===t.x && e.y===t.y);
+      if(enemy){
+        if(activate){
+          enemy.defeated = true;
+          enemy.active = false;
+          // Si el enemigo tiene targets propios, enviar señal
+          if(enemy.targets) applySignal(world, enemy.targets, true);
+        } else {
+          enemy.defeated = false;
+          enemy.active = false;
+        }
+      }
+    } else if(t.type === 'piston'){
+      // Activar/desactivar pistón
+      const piston = (world.pistons||[]).find(p => p.x===t.x && p.y===t.y);
+      if(piston) piston.active = activate;
     } else {
       // Por defecto: abrir/cerrar puerta
       const d = world.doors.find(d => d.x===t.x && d.y===t.y);
@@ -596,18 +801,13 @@ const BUILTINS = {
     const fc = frontCell(w);
     const npc = hasNPCAt(w, fc.x, fc.y);
     if(!npc) throw RuntimeError('No hay un NPC enfrente para entregar. Debes estar mirando hacia él.', line);
-    // Intentar entregar caja
-    if(w.player.carrying && npc.acceptsCrates){
-      w.player.carrying = null;
-      npc.received.boxes++;
-      state.log('Caja entregada al NPC.', 'log-info');
-      checkNPCCompletion(w, npc, state);
-      await doAction(state, line);
-      return;
-    }
     // Intentar entregar ítem de la pila (LIFO)
     if(w.inventory.length > 0){
       const topItem = w.inventory[w.inventory.length - 1];
+      // No se pueden entregar llaves a NPCs, solo items
+      if(topItem.type === 'llave'){
+        throw RuntimeError('No se pueden entregar llaves a un NPC. Solo se entregan items.', line);
+      }
       // Verificar si el NPC acepta este tipo de ítem
       const reqIdx = npc.requiredItems.indexOf(topItem.type);
       const reqIdIdx = npc.requiredItems.indexOf(topItem.id);
@@ -670,12 +870,6 @@ const BUILTINS = {
         needs.push('necesito: ' + remaining.join(', '));
       }
     }
-    if(npc.requiredBoxes > 0){
-      const remainingBoxes = npc.requiredBoxes - npc.received.boxes;
-      if(remainingBoxes > 0){
-        needs.push('necesito ' + remainingBoxes + ' caja(s)');
-      }
-    }
     if(needs.length === 0){
       msg += '¡Gracias! Ya tengo todo lo que necesitaba.';
     } else {
@@ -725,7 +919,24 @@ const BUILTINS = {
     // Una puerta se considera "protegida" (controlada por señal) si es bloqueada y tiene targets
     return d.locked && _doorHasSignalTargets(state.world, d);
   },
-  hayenemigo(){ return false; },
+  hayenemigo(args, state){
+    const {x,y} = frontCell(state.world);
+    return (state.world.enemies||[]).some(e => e.x===x && e.y===y && e.active && !e.defeated);
+  },
+  haypiston(args, state){
+    const {x,y} = frontCell(state.world);
+    return (state.world.pistons||[]).some(p => p.x===x && p.y===y);
+  },
+  enemigoactivo(args, state){
+    const {x,y} = frontCell(state.world);
+    const e = (state.world.enemies||[]).find(e => e.x===x && e.y===y);
+    return e ? (e.active && !e.defeated) : false;
+  },
+  pistonactivo(args, state){
+    const {x,y} = frontCell(state.world);
+    const p = (state.world.pistons||[]).find(p => p.x===x && p.y===y);
+    return p ? p.active : false;
+  },
   hayswitch(args, state){
     const p = state.world.player;
     return !!hasSwitchAt(state.world, p.x, p.y);
@@ -759,6 +970,45 @@ const BUILTINS = {
     return !!hasItemAt(state.world, x, y);
   },
 
+  // ---- Inventario (arreglo/pila) ----
+  inventariotamanio(args, state){
+    return (state.world.inventory||[]).length;
+  },
+  obtenerinventario(args, state){
+    const pos = Number(args[0]);
+    const inv = state.world.inventory||[];
+    if(isNaN(pos) || pos < 1 || pos > inv.length) return '';
+    const item = inv[pos-1]; // 1-indexed
+    return item.type; // 'llave' o 'item'
+  },
+  moverinventario(args, state, line){
+    const origen = Number(args[0]);
+    const destino = Number(args[1]);
+    const inv = state.world.inventory;
+    if(!inv || inv.length === 0) throw RuntimeError('El inventario está vacío', line);
+    if(isNaN(origen) || isNaN(destino)) throw RuntimeError('moverInventario() requiere dos posiciones numéricas', line);
+    if(origen < 1 || origen > inv.length) throw RuntimeError(`Posición origen ${origen} fuera de rango (1-${inv.length})`, line);
+    if(destino < 1 || destino > inv.length) throw RuntimeError(`Posición destino ${destino} fuera de rango (1-${inv.length})`, line);
+    if(origen === destino){ state.log('Posiciones iguales, no se mueve nada.', 'log-info'); return; }
+    const item = inv.splice(origen-1, 1)[0];
+    inv.splice(destino-1, 0, item);
+    state.log(`Movido ${item.type} de posición ${origen} a ${destino}`, 'log-info');
+  },
+  intercambiarinventario(args, state, line){
+    const pos1 = Number(args[0]);
+    const pos2 = Number(args[1]);
+    const inv = state.world.inventory;
+    if(!inv || inv.length === 0) throw RuntimeError('El inventario está vacío', line);
+    if(isNaN(pos1) || isNaN(pos2)) throw RuntimeError('intercambiarInventario() requiere dos posiciones numéricas', line);
+    if(pos1 < 1 || pos1 > inv.length) throw RuntimeError(`Posición ${pos1} fuera de rango (1-${inv.length})`, line);
+    if(pos2 < 1 || pos2 > inv.length) throw RuntimeError(`Posición ${pos2} fuera de rango (1-${inv.length})`, line);
+    if(pos1 === pos2){ state.log('Posiciones iguales, no se intercambia nada.', 'log-info'); return; }
+    const tmp = inv[pos1-1];
+    inv[pos1-1] = inv[pos2-1];
+    inv[pos2-1] = tmp;
+    state.log(`Intercambiadas posiciones ${pos1} y ${pos2}`, 'log-info');
+  },
+
   // ---- Utilidades matemáticas ----
   azar(args){ return Math.floor(Math.random() * (Number(args[0])||1)); },
   abs(args){ return Math.abs(Number(args[0])); },
@@ -776,8 +1026,7 @@ function findLastIndex(arr, fn){
 // Verificar si un NPC completó sus requisitos
 function checkNPCCompletion(world, npc, state){
   const itemsDone = npc.received.items.length >= npc.requiredItems.length;
-  const boxesDone = npc.received.boxes >= npc.requiredBoxes;
-  if(itemsDone && boxesDone && !npc.completed){
+  if(itemsDone && !npc.completed){
     npc.completed = true;
     state.log('NPC satisfecho. Activando mecanismos...', 'log-info');
     if(npc.targets) applySignal(world, npc.targets, true);

@@ -410,6 +410,62 @@
         "y": { "label": "Y", "default": "0" }
       }
     },
+    "game_hayenemigo": {
+      "category": "game_query",
+      "label": "Hay Enemigo",
+      "icon": "skull",
+      "fields": {}
+    },
+    "game_haypiston": {
+      "category": "game_query",
+      "label": "Hay Piston",
+      "icon": "precision_manufacturing",
+      "fields": {}
+    },
+    "game_enemigoactivo": {
+      "category": "game_query",
+      "label": "Enemigo Activo",
+      "icon": "visibility",
+      "fields": {}
+    },
+    "game_pistonactivo": {
+      "category": "game_query",
+      "label": "Piston Activo",
+      "icon": "bolt",
+      "fields": {}
+    },
+    "game_inventariotamanio": {
+      "category": "game_query",
+      "label": "Tamano Inventario",
+      "icon": "inventory",
+      "fields": {}
+    },
+    "game_obtenerinventario": {
+      "category": "game_query",
+      "label": "Obtener Inventario",
+      "icon": "lookup",
+      "fields": {
+        "pos": { "label": "Pos", "default": "1" }
+      }
+    },
+    "game_moverinventario": {
+      "category": "game_action",
+      "label": "Mover Inventario",
+      "icon": "swap_vert",
+      "fields": {
+        "origen": { "label": "Origen", "default": "1" },
+        "destino": { "label": "Destino", "default": "2" }
+      }
+    },
+    "game_intercambiarinventario": {
+      "category": "game_action",
+      "label": "Intercambiar Inventario",
+      "icon": "swap_horiz",
+      "fields": {
+        "pos1": { "label": "Pos 1", "default": "1" },
+        "pos2": { "label": "Pos 2", "default": "2" }
+      }
+    },
     "comentario": {
       "category": "comment",
       "label": "Comentario",

@@ -335,6 +335,14 @@
       case 'game_llevollave': return 'llevoLlave()';
       case 'game_llevocaja': return 'llevoCaja()';
       case 'game_hayitemen': return 'hayItemEn(' + (blk.fields.x || '0') + ', ' + (blk.fields.y || '0') + ')';
+      case 'game_hayenemigo': return 'hayEnemigo()';
+      case 'game_haypiston': return 'hayPiston()';
+      case 'game_enemigoactivo': return 'enemigoActivo()';
+      case 'game_pistonactivo': return 'pistonActivo()';
+      case 'game_inventariotamanio': return 'inventarioTamanio()';
+      case 'game_obtenerinventario': return 'obtenerInventario(' + (blk.fields.pos || '1') + ')';
+      case 'game_moverinventario': return 'moverInventario(' + (blk.fields.origen || '1') + ', ' + (blk.fields.destino || '2') + ')';
+      case 'game_intercambiarinventario': return 'intercambiarInventario(' + (blk.fields.pos1 || '1') + ', ' + (blk.fields.pos2 || '2') + ')';
       default: return '// bloque desconocido';
     }
   }
@@ -1370,7 +1378,15 @@
             'objetivocompleto': 'game_objetivocompleto',
             'posicionx': 'game_posicionx',
             'posiciony': 'game_posiciony',
-            'direccionj': 'game_direccionj'
+            'direccionj': 'game_direccionj',
+            'hayenemigo': 'game_hayenemigo',
+            'haypiston': 'game_haypiston',
+            'enemigoactivo': 'game_enemigoactivo',
+            'pistonactivo': 'game_pistonactivo',
+            'inventariotamanio': 'game_inventariotamanio',
+            'obtenerinventario': 'game_obtenerinventario',
+            'moverinventario': 'game_moverinventario',
+            'intercambiarinventario': 'game_intercambiarinventario'
           };
           if (GAME_FN_MAP[fnName]) {
             addParsedBlock(currentTarget(), GAME_FN_MAP[fnName], undefined, sourceLine);

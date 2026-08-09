@@ -33,7 +33,7 @@
     .grid-canvas{display:inline-grid;gap:0;border:2px solid #4a3818;border-radius:4px;background:#4a3818}
     .grid-cell{width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;cursor:pointer;position:relative;transition:all .1s;user-select:none;border:1px solid rgba(0,0,0,.08)}
     .grid-cell:hover{outline:2px solid #f4c025;outline-offset:-2px;z-index:2}
-    .cell-empty{background:#e5d9a8}.cell-wall{background:#4a3818;color:#6b5423}.cell-player{background:#e5d9a8;color:#e53e3e}.cell-target{background:#e5d9a8;color:#f4c025}.cell-box{background:#e5d9a8;color:#a56526}.cell-switch{background:#e5d9a8;color:#888}.cell-door{background:#e5d9a8;color:#5b3a1a}.cell-door-locked{background:#e5d9a8;color:#8b0000}.cell-key{background:#e5d9a8;color:#ffd700}.cell-item{background:#e5d9a8;color:#4488ff}.cell-npc{background:#e5d9a8;color:#4caf50}.cell-plate{background:#e5d9a8;color:#777}.cell-laser{background:#e5d9a8;color:#cc0000}
+    .cell-empty{background:#e5d9a8}.cell-wall{background:#4a3818;color:#6b5423}.cell-player{background:#e5d9a8;color:#e53e3e}.cell-target{background:#e5d9a8;color:#f4c025}.cell-box{background:#e5d9a8;color:#a56526}.cell-switch{background:#e5d9a8;color:#888}.cell-door{background:#e5d9a8;color:#5b3a1a}.cell-door-locked{background:#e5d9a8;color:#8b0000}.cell-key{background:#e5d9a8;color:#ffd700}.cell-item{background:#e5d9a8;color:#4488ff}.cell-npc{background:#e5d9a8;color:#4caf50}.cell-plate{background:#e5d9a8;color:#777}.cell-laser{background:#e5d9a8;color:#cc0000}.cell-enemy{background:#e5d9a8;color:#d32f2f}.cell-piston{background:#e5d9a8;color:#607d8b}
     .palette-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;font-size:13px;font-weight:500}
     .palette-item:hover{background:rgba(244,192,37,.1)}.palette-item.active{border-color:#f4c025;background:rgba(244,192,37,.15);font-weight:600}
     .palette-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
@@ -204,7 +204,6 @@
           <div class="config-group"><label class="config-label">Codigo inicial (starter)</label><textarea id="level-starter" class="config-textarea" style="font-family:monospace;font-size:11px;min-height:100px">Algoritmo Nivel
     // Escribe tu codigo aqui
 FinAlgoritmo</textarea></div>
-          <div class="config-group"><label class="config-label">Cajas a recoger (0 = todas las del mapa)</label><input type="number" id="level-boxes" class="config-input" value="0" min="0" /></div>
         </div>
       </div>
 
@@ -271,16 +270,18 @@ const ELEMENTS = [
   {id:'npc',char:'N',label:'NPC',icon:'face',bg:'#e5d9a8',fg:'#4caf50',cls:'cell-npc'},
   {id:'plate',char:'o',label:'Placa presion',icon:'radio_button_checked',bg:'#e5d9a8',fg:'#777',cls:'cell-plate'},
   {id:'laser',char:'L',label:'Laser',icon:'flash_on',bg:'#e5d9a8',fg:'#cc0000',cls:'cell-laser'},
+  {id:'enemy',char:'F',label:'Enemigo',icon:'dangerous',bg:'#e5d9a8',fg:'#d32f2f',cls:'cell-enemy'},
+  {id:'piston',char:'G',label:'Piston',icon:'precision_manufacturing',bg:'#e5d9a8',fg:'#607d8b',cls:'cell-piston'},
 ];
 
 let gridW=8, gridH=7, grid=[], currentTool='wall', isMouseDown=false;
 // Link data: arrays of objects per element type found on grid
-let switchLinks=[], plateLinks=[], npcConfigs=[], laserConfigs=[];
+let switchLinks=[], plateLinks=[], npcConfigs=[], laserConfigs=[], enemyConfigs=[], pistonConfigs=[];
 // Zoom/Pan state
 let vpZoom=1, vpOffX=0, vpOffY=0, vpPanning=false, vpPanStartX=0, vpPanStartY=0;
 // Link mode state
-let linkMode=false, selectedActivator=null; // {type:'switch'|'plate'|'npc'|'laser', x, y, idx}
-const LINK_COLORS = {switch:'#888', plate:'#9c27b0', npc:'#4caf50', laser:'#cc0000'};
+let linkMode=false, selectedActivator=null; // {type:'switch'|'plate'|'npc'|'laser'|'enemy'|'piston', x, y, idx}
+const LINK_COLORS = {switch:'#888', plate:'#9c27b0', npc:'#4caf50', laser:'#cc0000', enemy:'#d32f2f', piston:'#607d8b'};
 
 // ---- Grid helpers ----
 function findElements(ch){
@@ -396,7 +397,7 @@ function updatePreview(){
   ctx.fillStyle='#3a3218'; ctx.fillRect(0,0,cw,ch);
   const cell=Math.min(Math.floor(cw/gridW),Math.floor(ch/gridH));
   const oX=Math.floor((cw-cell*gridW)/2), oY=Math.floor((ch-cell*gridH)/2);
-  const cm={'#':'#4a3818','P':'#e53e3e','X':'#f4c025','B':'#a56526','S':'#888','D':'#5b3a1a','K':'#8b0000','k':'#ffd700','i':'#4488ff','N':'#4caf50','o':'#777','L':'#cc0000'};
+  const cm={'#':'#4a3818','P':'#e53e3e','X':'#f4c025','B':'#a56526','S':'#888','D':'#5b3a1a','K':'#8b0000','k':'#ffd700','i':'#4488ff','N':'#4caf50','o':'#777','L':'#cc0000','F':'#d32f2f','G':'#607d8b'};
   for(let y=0;y<gridH;y++) for(let x=0;x<gridW;x++){
     const c=grid[y][x];
     ctx.fillStyle=c==='.'?((x+y)%2===0?'#e5d9a8':'#c9b976'):(cm[c]||'#e5d9a8');
@@ -425,12 +426,17 @@ function renderLinksTab(){
   syncLinks('npc', npcs, npcConfigs);
   syncLinks('laser', lasers, laserConfigs);
 
+  const enemies=findElements('F');
+  const pistons=findElements('G');
+  syncLinks('enemy', enemies, enemyConfigs);
+  syncLinks('piston', pistons, pistonConfigs);
+
   // ---- SWITCHES SECTION ----
   if(switches.length>0){
-    const section=createSection('Interruptores','toggle_on','#888','Cada interruptor puede abrir puertas o desactivar laseres.');
+    const section=createSection('Interruptores','toggle_on','#888','Cada interruptor puede abrir puertas, desactivar laseres, activar pistones o desactivar enemigos.');
     switches.forEach((sw,i)=>{
       const card=createLinkCard('Interruptor',sw,cellIcon('S'),'#f5f3ee','#888');
-      // Targets: doors + lasers
+      // Targets: doors + lasers + enemies + pistons
       const targetsHeader=document.createElement('div');
       targetsHeader.className='link-section-title';
       targetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span> Controla (clic para vincular/desvincular):';
@@ -449,9 +455,21 @@ function renderLinksTab(){
         const chip=createTargetChip('L',l,switchLinks[i],'laser');
         chipsWrap.appendChild(chip);
       });
+      // Enemy chips (desactivar)
+      const enemiesForSwitch=findElements('F');
+      enemiesForSwitch.forEach(e=>{
+        const chip=createTargetChip('F',e,switchLinks[i],'enemy');
+        chipsWrap.appendChild(chip);
+      });
+      // Piston chips (activar)
+      const pistonsForSwitch=findElements('G');
+      pistonsForSwitch.forEach(p=>{
+        const chip=createTargetChip('G',p,switchLinks[i],'piston');
+        chipsWrap.appendChild(chip);
+      });
 
-      if(doors.length===0&&lasers.length===0){
-        chipsWrap.innerHTML='<span class="empty-hint">No hay puertas ni laseres en el mapa. Colocalos en la pestana Mapa.</span>';
+      if(doors.length===0&&lasers.length===0&&enemiesForSwitch.length===0&&pistonsForSwitch.length===0){
+        chipsWrap.innerHTML='<span class="empty-hint">No hay puertas, laseres, enemigos ni pistones en el mapa.</span>';
       }
       card.appendChild(chipsWrap);
       section.appendChild(card);
@@ -511,8 +529,8 @@ function renderLinksTab(){
       const itemsWrap=document.createElement('div');
       itemsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;margin-bottom:8px;';
 
-      // Show all items (k, i) on the map as selectable chips
-      const mapItems=[...findElements('k'),...findElements('i')];
+      // Show all items (i) on the map as selectable chips (NOT keys)
+      const mapItems=[...findElements('i')];
       if(mapItems.length>0){
         mapItems.forEach(it=>{
           const ch=grid[it.y][it.x];
@@ -531,20 +549,9 @@ function renderLinksTab(){
           itemsWrap.appendChild(chip);
         });
       } else {
-        itemsWrap.innerHTML='<span class="empty-hint">No hay items ni llaves en el mapa.</span>';
+        itemsWrap.innerHTML='<span class="empty-hint">No hay items en el mapa.</span>';
       }
       card.appendChild(itemsWrap);
-
-      // Required boxes
-      const boxesRow=document.createElement('div');
-      boxesRow.style.cssText='display:flex;align-items:center;gap:6px;';
-      boxesRow.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Cajas requeridas:</span>`;
-      const boxesInput=document.createElement('input');
-      boxesInput.type='number'; boxesInput.min='0'; boxesInput.max='20'; boxesInput.value=npcConfigs[i].requiredBoxes||0;
-      boxesInput.className='config-input'; boxesInput.style.cssText='width:50px;padding:3px 6px;font-size:12px';
-      boxesInput.onchange=function(){npcConfigs[i].requiredBoxes=parseInt(this.value)||0};
-      boxesRow.appendChild(boxesInput);
-      card.appendChild(boxesRow);
 
       // NPC door targets (puertas que se abren al completar el NPC)
       const npcTargetsHeader=document.createElement('div');
@@ -598,8 +605,146 @@ function renderLinksTab(){
     container.appendChild(section);
   }
 
+  // ---- ENEMY SECTION ----
+  if(enemies.length>0){
+    const section=createSection('Enemigos','dangerous','#d32f2f','Configura el comportamiento de cada enemigo. Los enemigos se mueven automaticamente y matan al jugador al tocarlo.');
+    enemies.forEach((e,i)=>{
+      const card=createLinkCard('Enemigo',e,cellIcon('F'),'#fff0f0','#d32f2f');
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+      row.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Direccion inicial:</span>`;
+      const sel=document.createElement('select');
+      sel.className='config-input'; sel.style.cssText='padding:3px 6px;font-size:12px;width:90px';
+      ['norte','sur','este','oeste'].forEach(d=>{
+        const o=document.createElement('option'); o.value=d; o.textContent=d.charAt(0).toUpperCase()+d.slice(1);
+        if(enemyConfigs[i].dir===d) o.selected=true;
+        sel.appendChild(o);
+      });
+      sel.onchange=function(){enemyConfigs[i].dir=this.value};
+      row.appendChild(sel);
+
+      const lbl=document.createElement('label');
+      lbl.style.cssText='display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer';
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=enemyConfigs[i].active!==false;
+      cb.onchange=function(){enemyConfigs[i].active=this.checked};
+      lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' Activo'));
+      row.appendChild(lbl);
+
+      const modeSel=document.createElement('select');
+      modeSel.className='config-input'; modeSel.style.cssText='padding:3px 6px;font-size:12px;width:100px';
+      const opt1=document.createElement('option'); opt1.value='bounce'; opt1.textContent='Rebota';
+      const opt2=document.createElement('option'); opt2.value='patrol'; opt2.textContent='Patrualla fija';
+      if(enemyConfigs[i].patrolMode==='patrol') opt2.selected=true; else opt1.selected=true;
+      modeSel.appendChild(opt1); modeSel.appendChild(opt2);
+      modeSel.onchange=function(){enemyConfigs[i].patrolMode=this.value};
+      row.appendChild(document.createTextNode(' Modo:'));
+      row.appendChild(modeSel);
+
+      const speedLbl=document.createElement('span');
+      speedLbl.style.cssText='font-size:12px;font-weight:600;color:#9c8749;margin-left:8px';
+      speedLbl.textContent='Velocidad:';
+      row.appendChild(speedLbl);
+      const speedSel=document.createElement('select');
+      speedSel.className='config-input'; speedSel.style.cssText='padding:3px 6px;font-size:12px;width:50px';
+      [1,2,3].forEach(s=>{
+        const o=document.createElement('option'); o.value=s; o.textContent=s;
+        if((enemyConfigs[i].speed||1)===s) o.selected=true;
+        speedSel.appendChild(o);
+      });
+      speedSel.onchange=function(){enemyConfigs[i].speed=parseInt(this.value)||1};
+      row.appendChild(speedSel);
+
+      card.appendChild(row);
+
+      // Enemy targets (signal to deactivate)
+      const enemyTargetsHeader=document.createElement('div');
+      enemyTargetsHeader.className='link-section-title';
+      enemyTargetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span; Activadores que lo desactivan (clic para vincular):';
+      card.appendChild(enemyTargetsHeader);
+      const enemyTargetsWrap=document.createElement('div');
+      enemyTargetsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;';
+      // Show switches as potential deactivators
+      const mapSwitches=findElements('S');
+      mapSwitches.forEach(s=>{
+        const linked=(enemyConfigs[i].targets||[]).some(t=>t.x===s.x&&t.y===s.y);
+        const chip=document.createElement('span');
+        chip.className='target-chip'+(linked?' selected':'');
+        chip.innerHTML=`<span class="chip-icon material-symbols-outlined">toggle_on</span>Switch (${s.x},${s.y})`;
+        chip.onclick=()=>{
+          if(!enemyConfigs[i].targets) enemyConfigs[i].targets=[];
+          const idx=enemyConfigs[i].targets.findIndex(t=>t.x===s.x&&t.y===s.y);
+          if(idx>=0) enemyConfigs[i].targets.splice(idx,1);
+          else enemyConfigs[i].targets.push({x:s.x,y:s.y,type:'switch'});
+          renderLinksTab();
+        };
+        enemyTargetsWrap.appendChild(chip);
+      });
+      if(mapSwitches.length===0) enemyTargetsWrap.innerHTML='<span class="empty-hint">No hay interruptores en el mapa.</span>';
+      card.appendChild(enemyTargetsWrap);
+
+      section.appendChild(card);
+    });
+    container.appendChild(section);
+  }
+
+  // ---- PISTON SECTION ----
+  if(pistons.length>0){
+    const section=createSection('Pistones','precision_manufacturing','#607d8b','Configura la direccion y comportamiento de cada piston. Los pistones empujan o atraen bloques.');
+    pistons.forEach((p,i)=>{
+      const card=createLinkCard('Piston',p,cellIcon('G'),'#f5f5f5','#607d8b');
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+      row.innerHTML=`<span class="text-xs font-semibold" style="color:#9c8749">Direccion:</span>`;
+      const sel=document.createElement('select');
+      sel.className='config-input'; sel.style.cssText='padding:3px 6px;font-size:12px;width:90px';
+      ['norte','sur','este','oeste'].forEach(d=>{
+        const o=document.createElement('option'); o.value=d; o.textContent=d.charAt(0).toUpperCase()+d.slice(1);
+        if(pistonConfigs[i].dir===d) o.selected=true;
+        sel.appendChild(o);
+      });
+      sel.onchange=function(){pistonConfigs[i].dir=this.value};
+      row.appendChild(sel);
+
+      const stickyLbl=document.createElement('label');
+      stickyLbl.style.cssText='display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer';
+      const stickyCb=document.createElement('input'); stickyCb.type='checkbox'; stickyCb.checked=!!pistonConfigs[i].sticky;
+      stickyCb.onchange=function(){pistonConfigs[i].sticky=this.checked};
+      stickyLbl.appendChild(stickyCb); stickyLbl.appendChild(document.createTextNode(' Pegajoso (atrae)'));
+      row.appendChild(stickyLbl);
+      card.appendChild(row);
+
+      // Piston activation targets (what activates this piston)
+      const pistonTargetsHeader=document.createElement('div');
+      pistonTargetsHeader.className='link-section-title';
+      pistonTargetsHeader.innerHTML='<span class="material-symbols-outlined" style="font-size:14px">arrow_back</span> Activadores que lo controlan (clic para vincular):';
+      card.appendChild(pistonTargetsHeader);
+      const pistonTargetsWrap=document.createElement('div');
+      pistonTargetsWrap.style.cssText='display:flex;flex-wrap:wrap;gap:2px;';
+      const mapSwitches=findElements('S');
+      mapSwitches.forEach(s=>{
+        const linked=(pistonConfigs[i].targets||[]).some(t=>t.x===s.x&&t.y===s.y);
+        const chip=document.createElement('span');
+        chip.className='target-chip'+(linked?' selected':'');
+        chip.innerHTML=`<span class="chip-icon material-symbols-outlined">toggle_on</span>Switch (${s.x},${s.y})`;
+        chip.onclick=()=>{
+          if(!pistonConfigs[i].targets) pistonConfigs[i].targets=[];
+          const idx=pistonConfigs[i].targets.findIndex(t=>t.x===s.x&&t.y===s.y);
+          if(idx>=0) pistonConfigs[i].targets.splice(idx,1);
+          else pistonConfigs[i].targets.push({x:s.x,y:s.y,type:'switch'});
+          renderLinksTab();
+        };
+        pistonTargetsWrap.appendChild(chip);
+      });
+      if(mapSwitches.length===0) pistonTargetsWrap.innerHTML='<span class="empty-hint">No hay interruptores en el mapa.</span>';
+      card.appendChild(pistonTargetsWrap);
+
+      section.appendChild(card);
+    });
+    container.appendChild(section);
+  }
+
   // Empty state
-  if(switches.length===0&&plates.length===0&&npcs.length===0&&lasers.length===0){
+  if(switches.length===0&&plates.length===0&&npcs.length===0&&lasers.length===0&&enemies.length===0&&pistons.length===0){
     container.innerHTML=`
       <div style="text-align:center;padding:40px 20px">
         <span class="material-symbols-outlined" style="font-size:48px;color:#e8e2ce">link_off</span>
@@ -620,8 +765,10 @@ function syncLinks(type, positions, linksArr){
     if(!linksArr.some(l=>l.x===p.x&&l.y===p.y)){
       if(type==='switch') linksArr.push({x:p.x,y:p.y,targets:[]});
       else if(type==='plate') linksArr.push({x:p.x,y:p.y,cajasRequeridas:1,targets:[]});
-      else if(type==='npc') linksArr.push({x:p.x,y:p.y,requiredItems:[],requiredBoxes:0,targets:[]});
+      else if(type==='npc') linksArr.push({x:p.x,y:p.y,requiredItems:[],targets:[]});
       else if(type==='laser') linksArr.push({x:p.x,y:p.y,dir:'norte',active:true});
+      else if(type==='enemy') linksArr.push({x:p.x,y:p.y,dir:'derecha',active:true,targets:[],patrolMode:'bounce',speed:1});
+      else if(type==='piston') linksArr.push({x:p.x,y:p.y,dir:'derecha',active:false,sticky:false,targets:[]});
     }
   });
 }
@@ -650,7 +797,8 @@ function createLinkCard(label,pos,icon,bg,fg){
 }
 
 function createTargetChip(ch,pos,linkData,type){
-  const isSelected=(linkData.targets||[]).some(t=>t.x===pos.x&&t.y===pos.y&&(type==='laser'?t.type==='laser':t.type!=='laser'));
+  // Check if this target is already linked
+  const isSelected=(linkData.targets||[]).some(t=>t.x===pos.x&&t.y===pos.y&&t.type===type);
   const chip=document.createElement('span');
   chip.className='target-chip'+(isSelected?' selected':'');
   const icon=cellIcon(ch);
@@ -658,7 +806,7 @@ function createTargetChip(ch,pos,linkData,type){
   chip.innerHTML=`<span class="chip-icon material-symbols-outlined">${icon}</span>${label} (${pos.x},${pos.y})`;
   chip.onclick=()=>{
     if(!linkData.targets) linkData.targets=[];
-    const idx=linkData.targets.findIndex(t=>t.x===pos.x&&t.y===pos.y&&((type==='laser'&&t.type==='laser')||(type!=='laser'&&t.type!=='laser')));
+    const idx=linkData.targets.findIndex(t=>t.x===pos.x&&t.y===pos.y&&t.type===type);
     if(idx>=0){
       linkData.targets.splice(idx,1);
     } else {
@@ -682,7 +830,6 @@ function buildLevelObject(){
   const silver=parseInt(document.getElementById('star-silver').value)||20;
   const starter=document.getElementById('level-starter').value||'';
   const dir=document.getElementById('player-dir').value||'derecha';
-  const boxesToCollect=parseInt(document.getElementById('level-boxes').value)||0;
 
   const data={
     id, name, desc, goals, hints,
@@ -714,19 +861,26 @@ function buildLevelObject(){
 
   const npcs=findElements('N');
   if(npcs.length>0) data.npcs=npcs.map((n,i)=>{
-    const cfg=npcConfigs.find(c=>c.x===n.x&&c.y===n.y)||{requiredItems:[],requiredBoxes:0};
-    // Convert "x,y" item keys to item types
+    const cfg=npcConfigs.find(c=>c.x===n.x&&c.y===n.y)||{requiredItems:[],targets:[]};
+    // Convert "x,y" item keys to item types (only items, not keys)
     const reqItems=(cfg.requiredItems||[]).map(key=>{
       const [ix,iy]=key.split(',').map(Number);
-      const ch=grid[iy]&&grid[iy][ix];
-      if(ch==='k') return 'llave';
-      if(ch==='i') return 'item';
       return 'item';
     });
-    return {x:n.x,y:n.y,requiredItems:reqItems,requiredBoxes:cfg.requiredBoxes||0,targets:(cfg.targets||[]).map(t=>({x:t.x,y:t.y})),acceptsCrates:false};
+    return {x:n.x,y:n.y,requiredItems:reqItems,targets:(cfg.targets||[]).map(t=>({x:t.x,y:t.y}))};
   });
 
-  if(boxesToCollect>0&&findElements('B').length>0) data.boxesToCollect=boxesToCollect;
+  const enemies=findElements('F');
+  if(enemies.length>0) data.enemies=enemies.map((e,i)=>{
+    const cfg=enemyConfigs.find(c=>c.x===e.x&&c.y===e.y)||{dir:'derecha',active:true,targets:[],patrolMode:'bounce',speed:1};
+    return {x:e.x,y:e.y,dir:cfg.dir,active:cfg.active!==false,targets:(cfg.targets||[]).map(t=>({x:t.x,y:t.y})),patrolMode:cfg.patrolMode||'bounce',speed:cfg.speed||1};
+  });
+
+  const pistons=findElements('G');
+  if(pistons.length>0) data.pistons=pistons.map((p,i)=>{
+    const cfg=pistonConfigs.find(c=>c.x===p.x&&c.y===p.y)||{dir:'derecha',active:false,sticky:false,targets:[]};
+    return {x:p.x,y:p.y,dir:cfg.dir,active:cfg.active||false,sticky:cfg.sticky||false,targets:(cfg.targets||[]).map(t=>({x:t.x,y:t.y}))};
+  });
 
   return data;
 }
@@ -757,6 +911,8 @@ function playCustomLevel(){
 // ============================================================
 function generateCode(){
   const data=buildLevelObject();
+  // Helper: convert JSON to JS-friendly format with single quotes
+  const jsStr = obj => JSON.stringify(obj).replace(/"/g, "'");
   let code='  {\n';
   code+=`    id:${data.id},\n`;
   code+=`    name:"${data.name}",\n`;
@@ -767,10 +923,12 @@ function generateCode(){
   code+=`    starter:\n\`${data.starter}\`,\n`;
   code+=`    grid:[\n${data.grid.map(g=>'      "'+g+'"').join(',\n')}\n    ],\n`;
   code+=`    dir:'${data.dir}'`;
-  if(data.switches) code+=`,\n    switches:${JSON.stringify(data.switches).replace(/"type":"/g,"type:'").replace(/','/g,"'").replace(/"}/g,"'}")}`;
-  if(data.lasers) code+=`,\n    lasers:${JSON.stringify(data.lasers).replace(/"dir":"/g,"dir:'").replace(/','/g,"'").replace(/"}/g,"'}")}`;
-  if(data.pressurePlates) code+=`,\n    pressurePlates:${JSON.stringify(data.pressurePlates)}`;
-  if(data.npcs) code+=`,\n    npcs:${JSON.stringify(data.npcs).replace(/"requiredItems":\[/g,'requiredItems:[').replace(/"/g,"'")}`;
+  if(data.switches) code+=`,\n    switches:${jsStr(data.switches)}`;
+  if(data.lasers) code+=`,\n    lasers:${jsStr(data.lasers)}`;
+  if(data.pressurePlates) code+=`,\n    pressurePlates:${jsStr(data.pressurePlates)}`;
+  if(data.npcs) code+=`,\n    npcs:${jsStr(data.npcs)}`;
+  if(data.enemies) code+=`,\n    enemies:${jsStr(data.enemies)}`;
+  if(data.pistons) code+=`,\n    pistons:${jsStr(data.pistons)}`;
   if(data.boxesToCollect) code+=`,\n    boxesToCollect: ${data.boxesToCollect}`;
   code+='\n  }';
   document.getElementById('code-output').textContent=code;
@@ -807,11 +965,12 @@ function importLevel(){
     document.getElementById('player-dir').value=level.dir||'derecha';
     document.getElementById('level-starter').value=level.starter||'';
     if(level.starThresholds){document.getElementById('star-gold').value=level.starThresholds.gold||10;document.getElementById('star-silver').value=level.starThresholds.silver||20;}
-    if(level.boxesToCollect) document.getElementById('level-boxes').value=level.boxesToCollect;
     switchLinks=(level.switches||[]).map(s=>({x:s.x,y:s.y,targets:s.targets||[]}));
     plateLinks=(level.pressurePlates||[]).map(p=>({x:p.x,y:p.y,cajasRequeridas:p.cajasRequeridas||1,targets:p.targets||[]}));
-    npcConfigs=(level.npcs||[]).map(n=>({x:n.x,y:n.y,requiredItems:n.requiredItems||[],requiredBoxes:n.requiredBoxes||0,targets:n.targets||[]}));
+    npcConfigs=(level.npcs||[]).map(n=>({x:n.x,y:n.y,requiredItems:n.requiredItems||[],targets:n.targets||[]}));
     laserConfigs=(level.lasers||[]).map(l=>({x:l.x,y:l.y,dir:l.dir||'norte',active:l.active!==undefined?l.active:true}));
+    enemyConfigs=(level.enemies||[]).map(e=>({x:e.x,y:e.y,dir:e.dir||'derecha',active:e.active!==undefined?e.active:true,targets:e.targets||[],patrolMode:e.patrolMode||'bounce',speed:e.speed||1}));
+    pistonConfigs=(level.pistons||[]).map(p=>({x:p.x,y:p.y,dir:p.dir||'derecha',active:p.active||false,sticky:p.sticky||false,targets:p.targets||[]}));
     renderGrid(); updatePreview(); switchTab('grid');
     alert('Nivel importado correctamente.');
   }catch(e){alert('Error al importar: '+e.message);}
@@ -824,8 +983,8 @@ function saveToStorage(){
     desc:document.getElementById('level-desc').value,goals:document.getElementById('level-goals').value,
     hints:document.getElementById('level-hints').value,starGold:document.getElementById('star-gold').value,
     starSilver:document.getElementById('star-silver').value,starter:document.getElementById('level-starter').value,
-    dir:document.getElementById('player-dir').value,boxesToCollect:document.getElementById('level-boxes').value,
-    switchLinks,plateLinks,npcConfigs,laserConfigs};
+    dir:document.getElementById('player-dir').value,
+    switchLinks,plateLinks,npcConfigs,laserConfigs,enemyConfigs,pistonConfigs};
   try{localStorage.setItem('devme_level_editor',JSON.stringify(data));alert('Nivel guardado.');}
   catch(e){alert('Error al guardar: '+e.message);}
 }
@@ -840,8 +999,9 @@ function loadFromStorage(){
     document.getElementById('level-desc').value=d.desc||'';document.getElementById('level-goals').value=d.goals||'';
     document.getElementById('level-hints').value=d.hints||'';document.getElementById('star-gold').value=d.starGold||10;
     document.getElementById('star-silver').value=d.starSilver||20;document.getElementById('level-starter').value=d.starter||'';
-    document.getElementById('player-dir').value=d.dir||'derecha';document.getElementById('level-boxes').value=d.boxesToCollect||0;
+    document.getElementById('player-dir').value=d.dir||'derecha';
     switchLinks=d.switchLinks||[];plateLinks=d.plateLinks||[];npcConfigs=d.npcConfigs||[];laserConfigs=d.laserConfigs||[];
+    enemyConfigs=d.enemyConfigs||[];pistonConfigs=d.pistonConfigs||[];
     renderGrid();updatePreview();alert('Nivel cargado.');
   }catch(e){alert('Error al cargar: '+e.message);}
 }
@@ -967,12 +1127,22 @@ function getActivatorInfo(x,y,ch){
     const idx=laserConfigs.findIndex(l=>l.x===x&&l.y===y);
     return {type:'laser',label:'L',idx:idx>=0?idx:laserConfigs.length};
   }
+  if(ch==='F'){
+    const idx=enemyConfigs.findIndex(l=>l.x===x&&l.y===y);
+    return {type:'enemy',label:'F',idx:idx>=0?idx:enemyConfigs.length};
+  }
+  if(ch==='G'){
+    const idx=pistonConfigs.findIndex(l=>l.x===x&&l.y===y);
+    return {type:'piston',label:'G',idx:idx>=0?idx:pistonConfigs.length};
+  }
   return null;
 }
 function getTargetInfo(x,y,ch){
   if(ch==='D'||ch==='K') return {type:'door'};
   if(ch==='L') return {type:'laser'};
-  if(ch==='k'||ch==='i') return {type:'item'};
+  if(ch==='i') return {type:'item'};
+  if(ch==='F') return {type:'enemy'};
+  if(ch==='G') return {type:'piston'};
   return null;
 }
 function ensureLinkData(type,x,y){
@@ -988,13 +1158,23 @@ function ensureLinkData(type,x,y){
   }
   if(type==='npc'){
     let idx=npcConfigs.findIndex(l=>l.x===x&&l.y===y);
-    if(idx<0){ npcConfigs.push({x,y,requiredItems:[],requiredBoxes:0}); idx=npcConfigs.length-1; }
+    if(idx<0){ npcConfigs.push({x,y,requiredItems:[],targets:[]}); idx=npcConfigs.length-1; }
     return npcConfigs[idx];
   }
   if(type==='laser'){
     let idx=laserConfigs.findIndex(l=>l.x===x&&l.y===y);
     if(idx<0){ laserConfigs.push({x,y,dir:'norte',active:true}); idx=laserConfigs.length-1; }
     return laserConfigs[idx];
+  }
+  if(type==='enemy'){
+    let idx=enemyConfigs.findIndex(l=>l.x===x&&l.y===y);
+    if(idx<0){ enemyConfigs.push({x,y,dir:'derecha',active:true,targets:[],patrolMode:'bounce',speed:1}); idx=enemyConfigs.length-1; }
+    return enemyConfigs[idx];
+  }
+  if(type==='piston'){
+    let idx=pistonConfigs.findIndex(l=>l.x===x&&l.y===y);
+    if(idx<0){ pistonConfigs.push({x,y,dir:'derecha',active:false,sticky:false,targets:[]}); idx=pistonConfigs.length-1; }
+    return pistonConfigs[idx];
   }
   return null;
 }
@@ -1040,11 +1220,11 @@ function toggleLinkTarget(tx,ty,targetType){
       else linkData.targets.push({x:tx,y:ty,type:'door'});
     }
   } else {
-    // Switches, plates link to doors/lasers
+    // Switches, plates link to doors/lasers/enemies/pistons
     if(!linkData.targets) linkData.targets=[];
     const idx=linkData.targets.findIndex(t=>t.x===tx&&t.y===ty);
     if(idx>=0) linkData.targets.splice(idx,1);
-    else linkData.targets.push({x:tx,y:ty,type:targetType==='laser'?'laser':'door'});
+    else linkData.targets.push({x:tx,y:ty,type:targetType});
   }
   showFloatPanel(selectedActivator.type,selectedActivator.x,selectedActivator.y,linkData);
 }
@@ -1075,8 +1255,8 @@ function showFloatPanel(type,x,y,linkData){
   const title=document.getElementById('flp-title');
   const body=document.getElementById('flp-body');
   if(!panel) return;
-  const labels={switch:'Interruptor',plate:'Placa de presion',npc:'NPC',laser:'Laser'};
-  const icons={switch:'toggle_on',plate:'radio_button_checked',npc:'face',laser:'flash_on'};
+  const labels={switch:'Interruptor',plate:'Placa de presion',npc:'NPC',laser:'Laser',enemy:'Enemigo',piston:'Piston'};
+  const icons={switch:'toggle_on',plate:'radio_button_checked',npc:'face',laser:'flash_on',enemy:'dangerous',piston:'precision_manufacturing'};
   const color=LINK_COLORS[type]||'#888';
   icon.innerHTML=`<span class="material-symbols-outlined">${icons[type]}</span>`;
   icon.style.background=color+'22';icon.style.color=color;
@@ -1085,6 +1265,8 @@ function showFloatPanel(type,x,y,linkData){
   if(type==='switch'||type==='plate'){
     const doors=[...findElements('D'),...findElements('K')];
     const lasers=findElements('L');
+    const enemies=findElements('F');
+    const pistons=findElements('G');
     html+=`<div class="flp-section-title">Puertas vinculadas</div>`;
     if(doors.length>0){
       html+='<div style="display:flex;flex-wrap:wrap;gap:2px">';
@@ -1104,13 +1286,31 @@ function showFloatPanel(type,x,y,linkData){
         });
         html+='</div>';
       } else html+='<div class="flp-empty">No hay laseres en el mapa</div>';
+      html+=`<div class="flp-section-title">Enemigos vinculados (desactivar)</div>`;
+      if(enemies.length>0){
+        html+='<div style="display:flex;flex-wrap:wrap;gap:2px">';
+        enemies.forEach(e=>{
+          const linked=(linkData.targets||[]).some(t=>t.x===e.x&&t.y===e.y&&t.type==='enemy');
+          html+=`<span class="flp-chip${linked?' selected':''}" onclick="toggleLinkTarget(${e.x},${e.y},'enemy')"><span class="material-symbols-outlined" style="font-size:14px">dangerous</span>Enemigo (${e.x},${e.y})</span>`;
+        });
+        html+='</div>';
+      } else html+='<div class="flp-empty">No hay enemigos en el mapa</div>';
+      html+=`<div class="flp-section-title">Pistones vinculados (activar)</div>`;
+      if(pistons.length>0){
+        html+='<div style="display:flex;flex-wrap:wrap;gap:2px">';
+        pistons.forEach(p=>{
+          const linked=(linkData.targets||[]).some(t=>t.x===p.x&&t.y===p.y&&t.type==='piston');
+          html+=`<span class="flp-chip${linked?' selected':''}" onclick="toggleLinkTarget(${p.x},${p.y},'piston')"><span class="material-symbols-outlined" style="font-size:14px">precision_manufacturing</span>Piston (${p.x},${p.y})</span>`;
+        });
+        html+='</div>';
+      } else html+='<div class="flp-empty">No hay pistones en el mapa</div>';
     }
     if(type==='plate'){
       html+=`<div class="flp-section-title">Cajas necesarias</div>`;
       html+=`<input type="number" min="1" max="10" value="${linkData.cajasRequeridas||1}" class="config-input" style="width:50px;padding:3px 6px;font-size:12px" onchange="ensureLinkData('plate',${x},${y}).cajasRequeridas=parseInt(this.value)||1">`;
     }
   } else if(type==='npc'){
-    const items=[...findElements('k'),...findElements('i')];
+    const items=[...findElements('i')];
     html+=`<div class="flp-section-title">Items requeridos (clic para agregar/quitar)</div>`;
     if(items.length>0){
       html+='<div style="display:flex;flex-wrap:wrap;gap:2px">';
@@ -1120,7 +1320,7 @@ function showFloatPanel(type,x,y,linkData){
         html+=`<span class="flp-chip${linked?' selected':''}" onclick="toggleLinkTarget(${it.x},${it.y},'item')"><span class="material-symbols-outlined" style="font-size:14px">${cellIcon(ch)}</span>${cellLabel(ch)} (${it.x},${it.y})</span>`;
       });
       html+='</div>';
-    } else html+='<div class="flp-empty">No hay items ni llaves en el mapa</div>';
+    } else html+='<div class="flp-empty">No hay items en el mapa</div>';
     // Door targets
     const npcDoors=[...findElements('D'),...findElements('K')];
     html+=`<div class="flp-section-title">Puertas que abre al completarse</div>`;
@@ -1132,8 +1332,6 @@ function showFloatPanel(type,x,y,linkData){
       });
       html+='</div>';
     } else html+='<div class="flp-empty">No hay puertas en el mapa</div>';
-    html+=`<div class="flp-section-title">Cajas requeridas</div>`;
-    html+=`<input type="number" min="0" max="20" value="${linkData.requiredBoxes||0}" class="config-input" style="width:50px;padding:3px 6px;font-size:12px" onchange="ensureLinkData('npc',${x},${y}).requiredBoxes=parseInt(this.value)||0">`;
   } else if(type==='laser'){
     html+=`<div class="flp-section-title">Direccion</div>`;
     html+=`<select class="config-input" style="padding:3px 6px;font-size:12px;width:100px" onchange="ensureLinkData('laser',${x},${y}).dir=this.value">`;
@@ -1142,6 +1340,29 @@ function showFloatPanel(type,x,y,linkData){
     });
     html+=`</select>`;
     html+=`<div style="margin-top:8px"><label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" ${linkData.active!==false?'checked':''} onchange="ensureLinkData('laser',${x},${y}).active=this.checked"> Activo al inicio</label></div>`;
+  } else if(type==='enemy'){
+    html+=`<div class="flp-section-title">Direccion inicial</div>`;
+    html+=`<select class="config-input" style="padding:3px 6px;font-size:12px;width:100px" onchange="ensureLinkData('enemy',${x},${y}).dir=this.value">`;
+    ['norte','sur','este','oeste'].forEach(d=>{
+      html+=`<option value="${d}"${linkData.dir===d?' selected':''}>${d.charAt(0).toUpperCase()+d.slice(1)}</option>`;
+    });
+    html+=`</select>`;
+    html+=`<div style="margin-top:8px"><label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" ${linkData.active!==false?'checked':''} onchange="ensureLinkData('enemy',${x},${y}).active=this.checked"> Activo</label></div>`;
+    html+=`<div style="margin-top:8px"><span class="flp-section-title">Modo:</span>`;
+    html+=`<select class="config-input" style="padding:3px 6px;font-size:12px;width:100px" onchange="ensureLinkData('enemy',${x},${y}).patrolMode=this.value">`;
+    html+=`<option value="bounce"${linkData.patrolMode==='bounce'?' selected':''}>Rebota</option>`;
+    html+=`<option value="patrol"${linkData.patrolMode==='patrol'?' selected':''}>Patrualla fija</option>`;
+    html+=`</select></div>`;
+    html+=`<div style="margin-top:8px"><span class="flp-section-title">Velocidad (1-3 movimientos por tick):</span>`;
+    html+=`<input type="number" min="1" max="3" value="${linkData.speed||1}" class="config-input" style="width:50px;padding:3px 6px;font-size:12px" onchange="ensureLinkData('enemy',${x},${y}).speed=parseInt(this.value)||1"></div>`;
+  } else if(type==='piston'){
+    html+=`<div class="flp-section-title">Direccion</div>`;
+    html+=`<select class="config-input" style="padding:3px 6px;font-size:12px;width:100px" onchange="ensureLinkData('piston',${x},${y}).dir=this.value">`;
+    ['norte','sur','este','oeste'].forEach(d=>{
+      html+=`<option value="${d}"${linkData.dir===d?' selected':''}>${d.charAt(0).toUpperCase()+d.slice(1)}</option>`;
+    });
+    html+=`</select>`;
+    html+=`<div style="margin-top:8px"><label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" ${linkData.sticky?'checked':''} onchange="ensureLinkData('piston',${x},${y}).sticky=this.checked"> Pegajoso (atrae)</label></div>`;
   }
   body.innerHTML=html;
   panel.classList.add('visible');

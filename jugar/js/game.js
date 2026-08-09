@@ -153,6 +153,10 @@ function getGoalsState(){
       st[i] = world.targets.some(t=>t.x===world.player.x && t.y===world.player.y);
     } else if(g.includes('empujar') && g.includes('placa')){
       st[i] = (world.pressurePlates||[]).some(pp=>pp.active);
+    } else if(g.includes('derrotar') && g.includes('enemigo')){
+      st[i] = (world.enemies||[]).length > 0 && (world.enemies||[]).every(e=>e.defeated || !e.active);
+    } else if(g.includes('activar') && g.includes('piston')){
+      st[i] = (world.pistons||[]).some(p=>p.active);
     } else {
       st[i] = false;
     }

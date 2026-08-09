@@ -14,10 +14,11 @@
     'abrir','cerrar','usar','esperar','decir','entregar','hablar',
     'frentelibre','hayobjeto','haycaja','hayitem','haypuerta','puertaabierta',
     'puertabloqueada','puertaprotegida',
-    'hayenemigo','hayswitch','haynpc',
+    'hayenemigo','haypiston','enemigoactivo','pistonactivo','hayswitch','haynpc',
     'inventariolleno','llevoobjeto','llevocaja','llevollave','objetivocompleto',
     'posicionx','posiciony','direccionj','cajasentregadas','cajasrestantes',
     'haycajaen','hayitemen',
+    'inventariotamanio','obtenerinventario','moverinventario','intercambiarinventario',
     'azar','abs','raiz'
   ]);
 
@@ -117,12 +118,14 @@
             const n = normalizeName(node.name);
             if (['frentelibre','hayobjeto','haycaja','hayitem','haypuerta','puertaabierta',
                  'puertabloqueada','puertaprotegida',
-                 'hayenemigo','hayswitch','haynpc',
+                 'hayenemigo','haypiston','enemigoactivo','pistonactivo','hayswitch','haynpc',
                  'inventariolleno','llevoobjeto','llevocaja','llevollave','objetivocompleto',
                  'haycajaen','hayitemen'].includes(n)) return 'logico';
             if (['posicionx','posiciony','cajasentregadas','cajasrestantes',
+                 'inventariotamanio',
                  'azar','abs','raiz'].includes(n)) return 'entero';
             if (n === 'direccionj') return 'caracter';
+            if (n === 'obtenerinventario') return 'caracter';
             return 'unknown';
           }
           const sp = subprograms[normalizeName(node.name)];

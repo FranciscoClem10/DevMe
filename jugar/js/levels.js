@@ -5,7 +5,8 @@
  *         'K' puerta bloqueada (por señal o por llave),
  *         'k' llave, 'i' ítem genérico,
  *         'N' NPC, 'o' placa de presión,
- *         'L' emisor de láser
+ *         'L' emisor de láser,
+ *         'F' enemigo, 'G' pistón
  * ============================================================ */
 (function(global){
 'use strict';
@@ -269,7 +270,7 @@ FinAlgoritmo`,
       "#######"
     ],
     npcs:[
-      { x:3, y:3, requiredItems:['item'], requiredBoxes:0, targets:[], acceptsCrates:false }
+      { x:3, y:3, requiredItems:['item'], targets:[] }
     ],
     dir:'derecha'
   },
@@ -444,11 +445,47 @@ FinAlgoritmo`,
       { x:3, y:6, cajasRequeridas:1, targets:[{x:7,y:6}] }
     ],
     npcs:[
-      { x:7, y:5, requiredItems:['item'], requiredBoxes:0, targets:[{x:7,y:6}], acceptsCrates:false }
+      { x:7, y:5, requiredItems:['item'], targets:[{x:7,y:6}] }
     ],
     dir:'derecha'
+  },
+  {
+    id:16,
+    name:"Mi nivel",
+    desc:"Prueba del piston pegajoso",
+    goals:["Llegar a la meta"],
+    hints:[
+      "Usa avanzar() para moverte."
+    ],
+    starThresholds:{ gold: 10, silver: 20 },
+    starter:
+`Algoritmo Nivel
+    // Escribe tu codigo aqui
+FinAlgoritmo`,
+    grid:[
+      "........",
+      "........",
+      "PSGB..X.",
+      "........",
+      "........",
+      "........",
+      "........"
+    ],
+    dir:'derecha',
+    switches:[{'x':1,'y':2,'targets':[{'x':2,'y':2,'type':'piston'}]}],
+    pistons:[{'x':2,'y':2,'dir':'este','active':false,'sticky':true,'targets':[{'x':1,'y':2}]}]
   }
 ];
+
+// Normaliza direcciones: norte/sur/este/oeste -> arriba/abajo/derecha/izquierda
+function _normalizeDir(d){
+  const s = String(d||'').toLowerCase().trim();
+  if(['arriba','norte','n','up'].includes(s)) return 'arriba';
+  if(['abajo','sur','s','down'].includes(s)) return 'abajo';
+  if(['izquierda','oeste','w','left','izq'].includes(s)) return 'izquierda';
+  if(['derecha','este','e','right','der'].includes(s)) return 'derecha';
+  return 'derecha';
+}
 
 // Convierte la definición de un nivel en un objeto mundo ejecutable
 function buildLevel(def){
@@ -464,6 +501,8 @@ function buildLevel(def){
   const npcs = [];
   const pressurePlates = [];
   const lasers = [];
+  const enemies = [];
+  const pistons = [];
 
   for(let y=0; y<H; y++){
     for(let x=0; x<W; x++){
@@ -473,14 +512,16 @@ function buildLevel(def){
       else if(c === 'B'){ boxes.push({x,y}); grid[y][x]='.'; }
       else if(c === 'X'){ targets.push({x,y}); grid[y][x]='.'; }
       else if(c === 'S'){ switches.push({x,y, active:false, targets:[]}); grid[y][x]='.'; }
-      else if(c === 'D'){ doors.push({x,y, open:false, locked:false, protected:false}); grid[y][x]='.'; }
-      else if(c === 'd'){ doors.push({x,y, open:true, locked:false, protected:false}); grid[y][x]='.'; }
-      else if(c === 'K'){ doors.push({x,y, open:false, locked:true, protected:false}); grid[y][x]='.'; }
+      else if(c === 'D'){ doors.push({x,y, open:false, locked:false}); grid[y][x]='.'; }
+      else if(c === 'd'){ doors.push({x,y, open:true, locked:false}); grid[y][x]='.'; }
+      else if(c === 'K'){ doors.push({x,y, open:false, locked:true}); grid[y][x]='.'; }
       else if(c === 'k'){ items.push({x,y, type:'llave', id:'llave_'+x+'_'+y}); grid[y][x]='.'; }
       else if(c === 'i'){ items.push({x,y, type:'item', id:'item_'+x+'_'+y}); grid[y][x]='.'; }
-      else if(c === 'N'){ npcs.push({x,y, requiredItems:[], requiredBoxes:0, targets:[], acceptsCrates:false, received:{items:[], boxes:0}, completed:false}); grid[y][x]='.'; }
+      else if(c === 'N'){ npcs.push({x,y, requiredItems:[], targets:[], received:{items:[]}, completed:false}); grid[y][x]='.'; }
       else if(c === 'o'){ pressurePlates.push({x,y, cajasRequeridas:1, active:false, targets:[]}); grid[y][x]='.'; }
       else if(c === 'L'){ lasers.push({x,y, dir:'este', active:true, targets:[]}); grid[y][x]='.'; }
+      else if(c === 'F'){ enemies.push({x,y, dir:'derecha', active:true, defeated:false, targets:[], patrolMode:'bounce'}); grid[y][x]='.'; }
+      else if(c === 'G'){ pistons.push({x,y, dir:'derecha', active:false, sticky:false, targets:[], extended:false, extendX:null, extendY:null}); grid[y][x]='.'; }
     }
   }
 
@@ -496,9 +537,35 @@ function buildLevel(def){
     def.npcs.forEach((n, i) => {
       if(npcs[i]){
         npcs[i].requiredItems = n.requiredItems || [];
-        npcs[i].requiredBoxes = n.requiredBoxes || 0;
         npcs[i].targets = n.targets || [];
-        npcs[i].acceptsCrates = n.acceptsCrates || false;
+      }
+    });
+  }
+
+  // Asociar enemigos definidos en def.enemies
+  if(def.enemies){
+    def.enemies.forEach((e, i) => {
+      if(enemies[i]){
+        enemies[i].dir = _normalizeDir(e.dir || 'derecha');
+        enemies[i].active = e.active !== undefined ? e.active : true;
+        enemies[i].targets = e.targets || [];
+        enemies[i].patrolMode = e.patrolMode || 'bounce';
+        enemies[i].speed = Math.max(1, Math.min(3, parseInt(e.speed) || 1));
+      }
+    });
+  }
+
+  // Asociar pistones definidos en def.pistons
+  if(def.pistons){
+    def.pistons.forEach((p, i) => {
+      if(pistons[i]){
+        pistons[i].dir = _normalizeDir(p.dir || 'derecha');
+        pistons[i].active = p.active !== undefined ? p.active : false;
+        pistons[i].sticky = p.sticky || false;
+        pistons[i].targets = p.targets || [];
+        pistons[i].extended = false;
+        pistons[i].extendX = null;
+        pistons[i].extendY = null;
       }
     });
   }
@@ -536,6 +603,8 @@ function buildLevel(def){
     npcs,
     pressurePlates,
     lasers,
+    enemies,
+    pistons,
     laserBeams: [],
     inventory: [],
     delivered: 0,

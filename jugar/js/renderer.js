@@ -21,7 +21,9 @@ const COLORS = {
   npc:'#4caf50', npcDone:'#81c784',
   plateOff:'#777', plateOn:'#ff9800',
   laser:'#ff0000', laserBeam:'rgba(255,0,0,0.5)',
-  laserEmitter:'#cc0000'
+  laserEmitter:'#cc0000',
+  enemy:'#d32f2f', enemyDead:'#888',
+  piston:'#607d8b', pistonActive:'#ff9800'
 };
 
 const IMAGES = {
@@ -374,6 +376,119 @@ function makeRenderer(canvas){
     for(const b of world.boxes) drawBox(offX+b.x*cell, offY+b.y*cell, false);
     // cajas entregadas (sobre metas)
     for(const b of world.deliveredAt) drawBox(offX+b.x*cell, offY+b.y*cell, true);
+
+    // enemigos
+    if(world.enemies){
+      for(const enemy of world.enemies){
+        const px = offX+enemy.x*cell, py = offY+enemy.y*cell;
+        const cx = px+cell/2, cy = py+cell/2;
+        if(enemy.defeated){
+          // Enemigo derrotado: gris, tachado
+          ctx.fillStyle = COLORS.enemyDead;
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath(); ctx.arc(cx, cy, cell*0.3, 0, Math.PI*2); ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(px+cell*0.2, py+cell*0.2); ctx.lineTo(px+cell*0.8, py+cell*0.8); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(px+cell*0.8, py+cell*0.2); ctx.lineTo(px+cell*0.2, py+cell*0.8); ctx.stroke();
+        } else {
+          // Enemigo activo: rojo con forma de calavera
+          ctx.fillStyle = enemy.active ? COLORS.enemy : COLORS.enemyDead;
+          ctx.beginPath(); ctx.arc(cx, cy-cell*0.05, cell*0.28, 0, Math.PI*2); ctx.fill();
+          // Ojos
+          ctx.fillStyle = '#fff';
+          ctx.beginPath(); ctx.arc(cx-cell*0.1, cy-cell*0.1, cell*0.07, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(cx+cell*0.1, cy-cell*0.1, cell*0.07, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = '#000';
+          ctx.beginPath(); ctx.arc(cx-cell*0.1, cy-cell*0.1, cell*0.035, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(cx+cell*0.1, cy-cell*0.1, cell*0.035, 0, Math.PI*2); ctx.fill();
+          // Boca
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(cx-cell*0.1, cy+cell*0.1); ctx.lineTo(cx+cell*0.1, cy+cell*0.1); ctx.stroke();
+          // Letra F
+          ctx.fillStyle = '#fff';
+          ctx.font = `bold ${cell*0.16}px sans-serif`;
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText('F', cx, cy+cell*0.25);
+          // Indicador de dirección
+          const dirMap = {arriba:[0,-1],derecha:[1,0],abajo:[0,1],izquierda:[-1,0]};
+          const [edx,edy] = dirMap[enemy.dir]||[1,0];
+          ctx.fillStyle = 'rgba(255,0,0,0.4)';
+          ctx.beginPath();
+          ctx.moveTo(cx+edx*cell*0.35, cy+edy*cell*0.35);
+          ctx.lineTo(cx+edy*cell*0.08-edx*cell*0.05, cy-edx*cell*0.08-edy*cell*0.05);
+          ctx.lineTo(cx-edy*cell*0.08-edx*cell*0.05, cy+edx*cell*0.08-edy*cell*0.05);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+    }
+
+    // pistones
+    if(world.pistons){
+      for(const piston of world.pistons){
+        const px = offX+piston.x*cell, py = offY+piston.y*cell;
+        const cx = px+cell/2, cy = py+cell/2;
+        // Base del pistón
+        ctx.fillStyle = piston.active ? COLORS.pistonActive : COLORS.piston;
+        ctx.fillRect(px+cell*0.1, py+cell*0.1, cell*0.8, cell*0.8);
+        ctx.strokeStyle = '#37474f';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px+cell*0.1, py+cell*0.1, cell*0.8, cell*0.8);
+        // Flecha de dirección
+        const dirMap = {arriba:[0,-1],derecha:[1,0],abajo:[0,1],izquierda:[-1,0]};
+        const [pdx,pdy] = dirMap[piston.dir]||[1,0];
+        ctx.fillStyle = piston.active ? '#fff' : '#b0bec5';
+        ctx.beginPath();
+        ctx.moveTo(cx+pdx*cell*0.3, cy+pdy*cell*0.3);
+        ctx.lineTo(cx+pdy*cell*0.12-pdx*cell*0.1, cy-pdx*cell*0.12-pdy*cell*0.1);
+        ctx.lineTo(cx-pdy*cell*0.12-pdx*cell*0.1, cy+pdx*cell*0.12-pdy*cell*0.1);
+        ctx.closePath(); ctx.fill();
+        // Letra G
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${cell*0.18}px sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('G', cx, cy+cell*0.02);
+        // Indicador pegajoso
+        if(piston.sticky){
+          ctx.fillStyle = '#ffeb3b';
+          ctx.font = `bold ${cell*0.12}px sans-serif`;
+          ctx.fillText('~', cx, py+cell*0.18);
+        }
+        
+        // Dibujar extensión del pistón cuando está activo
+        if(piston.extended && piston.extendX !== null && piston.extendY !== null){
+          const extPx = offX + piston.extendX * cell;
+          const extPy = offY + piston.extendY * cell;
+          const extCx = extPx + cell/2;
+          const extCy = extPy + cell/2;
+          
+          // Dibujar la extensión (brazo del pistón)
+          ctx.fillStyle = COLORS.pistonActive;
+          ctx.fillRect(extPx+cell*0.15, extPy+cell*0.15, cell*0.7, cell*0.7);
+          ctx.strokeStyle = '#e65100';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(extPx+cell*0.15, extPy+cell*0.15, cell*0.7, cell*0.7);
+          
+          // Dibujar líneas de conexión entre la base y la extensión
+          ctx.strokeStyle = '#ff9800';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(cx + pdx*cell*0.4, cy + pdy*cell*0.4);
+          ctx.lineTo(extCx - pdx*cell*0.35, extCy - pdy*cell*0.35);
+          ctx.stroke();
+          
+          // Dibujar indicador de empuje en la extensión
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.moveTo(extCx+pdx*cell*0.25, extCy+pdy*cell*0.25);
+          ctx.lineTo(extCx+pdy*cell*0.1-pdx*cell*0.08, extCy-pdx*cell*0.1-pdy*cell*0.08);
+          ctx.lineTo(extCx-pdy*cell*0.1-pdx*cell*0.08, extCy+pdx*cell*0.1-pdy*cell*0.08);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+    }
 
     // jugador
     drawPlayer(offX + world.player.x*cell, offY + world.player.y*cell, world.player.dir, world.player.carrying);
