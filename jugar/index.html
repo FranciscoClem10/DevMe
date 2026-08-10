@@ -44,11 +44,11 @@
     font-style: italic;
   }
 .console .log-in {
-    color: #22a324;        /* morado brillante */
+    color: #107712;        /* morado brillante */
 }
 
   .console .in {
-      color: #0a97a7 !important;   /* cyan para input */
+      color: #0146da !important;   /* cyan para input */
   }
 
   .console .log-info {
@@ -346,6 +346,49 @@
   height: 100%;
   min-height: 0;  /* ← evita que el contenido se desborde */
 }
+
+/* Todas las pestañas: ocultas por defecto y sin espacio */
+.panel-container .tab-content {
+  display: none !important;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Pestaña activa: visible y ocupando todo */
+.panel-container .tab-content.active {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+/* Los hijos directos de una pestaña activa deben estirarse */
+.tab-content.active > * {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+/* Para la pestaña de errores: si está vacía, mostrar mensaje */
+#errors:empty::before {
+  content: "Sin errores";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9c8749;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+/* Para la pestaña Bug: centrar la imagen */
+#tab-debug.active {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+#tab-debug img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
   </style>
 </head>
 <body class="bg-background-light font-display text-text-light overflow-hidden">
@@ -575,8 +618,8 @@
           <div id="errors" class="errors bg-panal"></div>
         </div>
         <div id="tab-debug" class="tab-content bg-panal">
-		  <img src="imgs/Proximamente.png" alt="En progreso" style="width:100%; height:100%; object-fit:contain;" />
-		</div>
+          <img src="imgs/Proximamente.png" alt="En progreso" style="width:100%; height:100%; object-fit:contain;" />
+        </div>
         <div id="tab-level" class="tab-content" style="overflow:auto;">
           <div style="padding:10px; display:flex; flex-direction:column; gap:8px; height:100%; overflow:auto;">
             <div style="display:flex; align-items:center; gap:8px;">

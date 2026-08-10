@@ -164,16 +164,22 @@
     if (tab) tab.click();
   }
 
-  // === Console sub-tabs ===
-  const consoleTabs = document.querySelectorAll('.tab');
-  consoleTabs.forEach(t => {
-    t.addEventListener('click', () => {
-      consoleTabs.forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-      document.getElementById('tab-' + t.dataset.tab).classList.add('active');
-    });
+// === Console sub-tabs ===
+const consoleTabs = document.querySelectorAll('.tab');
+consoleTabs.forEach(t => {
+  t.addEventListener('click', () => {
+    consoleTabs.forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const tabId = t.dataset.tab;
+    document.getElementById('tab-' + tabId).classList.add('active');
+
+    // Ocultar input-line si no estamos en la pestaña de consola
+    if (tabId !== 'console') {
+      document.getElementById('input-line').style.display = 'none';
+    }
   });
+});
 
   function switchToConsoleTab(tabName) {
     consoleTabs.forEach(x => x.classList.remove('active'));
@@ -259,6 +265,8 @@
   // === User Input ===
   function waitForInput(prompt) {
     return new Promise((resolve, reject) => {
+      const consoleTab = document.querySelector('.tab[data-tab="console"]');
+    if (consoleTab) consoleTab.click();
       const abortHandler = () => {
         reject(new Error('Ejecucion cancelada'));
         cleanup();
