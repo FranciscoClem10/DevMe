@@ -1,0 +1,478 @@
+{
+  "categories": {
+    "structure": { "name": "Estructura", "icon": "account_tree" },
+    "game":      { "name": "Juego", "icon": "sports_esports" },
+    "game_query":{ "name": "Consultas Juego", "icon": "question_mark" },
+    "var":       { "name": "Variables", "icon": "variable_insert" },
+    "io":        { "name": "Entrada/Salida", "icon": "import_export" },
+    "condition": { "name": "Condiciones", "icon": "fork_right" },
+    "loop":      { "name": "Bucles", "icon": "repeat" },
+    "math":      { "name": "Matematicas", "icon": "calculate" },
+    "function":  { "name": "Funciones", "icon": "settings_applications" },
+    "array":     { "name": "Arreglos", "icon": "view_list" },
+    "comment":   { "name": "Comentarios", "icon": "comment" }
+  },
+  "blocks": {
+    "algoritmo_inicio": {
+      "category": "structure",
+      "label": "Algoritmo",
+      "icon": "play_circle",
+      "isStructure": true,
+      "isContainer": true,
+      "endLabel": "FinAlgoritmo",
+      "fields": {
+        "name": { "label": "Nombre", "default": "MiAlgoritmo" }
+      }
+    },
+    "subproceso": {
+      "category": "structure",
+      "label": "SubProceso",
+      "icon": "settings_applications",
+      "isStructure": true,
+      "isContainer": true,
+      "endLabel": "FinSubProceso",
+      "fields": {
+        "name":   { "label": "Nombre", "default": "miSub" },
+        "params": { "label": "Parametros", "default": "" }
+      }
+    },
+    "funcion": {
+      "category": "structure",
+      "label": "Funcion",
+      "icon": "functions",
+      "isStructure": true,
+      "isContainer": true,
+      "endLabel": "FinFuncion",
+      "fields": {
+        "name":   { "label": "Nombre", "default": "miFunc" },
+        "params": { "label": "Parametros", "default": "n" }
+      }
+    },
+    "definir": {
+      "category": "var",
+      "label": "Definir",
+      "icon": "variable_insert",
+      "fields": {
+        "name": { "label": "Nombre", "default": "x" },
+        "type": { "label": "Tipo", "default": "Entero" }
+      }
+    },
+    "constante": {
+      "category": "var",
+      "label": "Constante",
+      "icon": "lock",
+      "fields": {
+        "name":  { "label": "Nombre", "default": "PI" },
+        "value": { "label": "Valor", "default": "3.1416" }
+      }
+    },
+    "dimension": {
+      "category": "var",
+      "label": "Dimension",
+      "icon": "grid_on",
+      "fields": {
+        "name":  { "label": "Nombre", "default": "arr" },
+        "range": { "label": "Rango", "default": "1..10" }
+      }
+    },
+    "asignar": {
+      "category": "var",
+      "label": "Asignar",
+      "icon": "arrow_right_alt",
+      "fields": {
+        "target": { "label": "Variable", "default": "x" },
+        "value":  { "label": "Valor", "default": "0" }
+      }
+    },
+    "escribir": {
+      "category": "io",
+      "label": "Escribir",
+      "icon": "print",
+      "fields": {
+        "msg": { "label": "Mensaje", "default": "\"Hola\"" }
+      }
+    },
+    "escribir_sin": {
+      "category": "io",
+      "label": "Escribir Sin Saltar",
+      "icon": "print",
+      "fields": {
+        "msg": { "label": "Mensaje", "default": "\"Hola\"" }
+      }
+    },
+    "leer": {
+      "category": "io",
+      "label": "Leer",
+      "icon": "input",
+      "fields": {
+        "var": { "label": "Variable", "default": "x" }
+      }
+    },
+    "limpiar": {
+      "category": "io",
+      "label": "Limpiar Pantalla",
+      "icon": "cleaning_services",
+      "fields": {}
+    },
+    "si": {
+      "category": "condition",
+      "label": "Si...Entonces",
+      "icon": "fork_right",
+      "isContainer": true,
+      "hasElse": true,
+      "endLabel": "FinSi",
+      "fields": {
+        "cond": { "label": "Condicion", "default": "x > 0" }
+      }
+    },
+    "sino_si": {
+      "category": "condition",
+      "label": "Sino Si",
+      "icon": "alt_route",
+      "isContainer": true,
+      "hasElse": false,
+      "endLabel": "",
+      "fields": {
+        "cond": { "label": "Condicion", "default": "x < 0" }
+      }
+    },
+    "segun": {
+      "category": "condition",
+      "label": "Segun",
+      "icon": "alt_route",
+      "isContainer": true,
+      "endLabel": "FinSegun",
+      "fields": {
+        "var": { "label": "Variable", "default": "opcion" }
+      }
+    },
+    "mientras": {
+      "category": "loop",
+      "label": "Mientras",
+      "icon": "repeat",
+      "isContainer": true,
+      "endLabel": "FinMientras",
+      "fields": {
+        "cond": { "label": "Condicion", "default": "x < 10" }
+      }
+    },
+    "repetir": {
+      "category": "loop",
+      "label": "Repetir",
+      "icon": "replay",
+      "isContainer": true,
+      "endLabel": "Hasta Que",
+      "fields": {
+        "cond": { "label": "Condicion", "default": "x > 0" }
+      }
+    },
+    "para": {
+      "category": "loop",
+      "label": "Para",
+      "icon": "loop",
+      "isContainer": true,
+      "endLabel": "FinPara",
+      "fields": {
+        "var":   { "label": "Variable", "default": "i" },
+        "start": { "label": "Desde", "default": "1" },
+        "end":   { "label": "Hasta", "default": "10" },
+        "step":  { "label": "Paso", "default": "1" }
+      }
+    },
+    "asignar_math": {
+      "category": "math",
+      "label": "Operacion",
+      "icon": "calculate",
+      "fields": {
+        "target": { "label": "Variable", "default": "resultado" },
+        "expr":   { "label": "Expresion", "default": "a + b" }
+      }
+    },
+    "llamar": {
+      "category": "function",
+      "label": "Llamar",
+      "icon": "call",
+      "fields": {
+        "name": { "label": "Nombre", "default": "miSub" },
+        "args": { "label": "Args", "default": "" }
+      }
+    },
+    "asignar_arr": {
+      "category": "array",
+      "label": "Asignar Arreglo",
+      "icon": "view_list",
+      "fields": {
+        "name":  { "label": "Arreglo", "default": "arr" },
+        "idx":   { "label": "Indice", "default": "i" },
+        "value": { "label": "Valor", "default": "0" }
+      }
+    },
+    "game_avanzar": {
+      "category": "game",
+      "label": "Avanzar",
+      "icon": "arrow_forward",
+      "fields": {}
+    },
+    "game_girar": {
+      "category": "game",
+      "label": "Girar",
+      "icon": "rotate_left",
+      "fields": {
+        "angle": { "label": "Angulo", "default": "90" }
+      }
+    },
+    "game_empujar": {
+      "category": "game",
+      "label": "Empujar Caja",
+      "icon": "pan_tool",
+      "fields": {}
+    },
+    "game_mover": {
+      "category": "game",
+      "label": "Mover",
+      "icon": "open_with",
+      "fields": {
+        "dir": { "label": "Direccion", "default": "derecha" }
+      }
+    },
+    "game_tomar": {
+      "category": "game",
+      "label": "Tomar",
+      "icon": "select_all",
+      "fields": {}
+    },
+    "game_soltar": {
+      "category": "game",
+      "label": "Soltar",
+      "icon": "deselect",
+      "fields": {}
+    },
+    "game_activar": {
+      "category": "game",
+      "label": "Activar",
+      "icon": "bolt",
+      "fields": {}
+    },
+    "game_desactivar": {
+      "category": "game",
+      "label": "Desactivar",
+      "icon": "bolt",
+      "fields": {}
+    },
+    "game_abrir": {
+      "category": "game",
+      "label": "Abrir Puerta",
+      "icon": "door_open",
+      "fields": {}
+    },
+    "game_cerrar": {
+      "category": "game",
+      "label": "Cerrar Puerta",
+      "icon": "door_front",
+      "fields": {}
+    },
+    "game_usar": {
+      "category": "game",
+      "label": "Usar",
+      "icon": "handshake",
+      "fields": {}
+    },
+    "game_esperar_accion": {
+      "category": "game",
+      "label": "Esperar",
+      "icon": "hourglass_empty",
+      "fields": {
+        "tiempo": { "label": "Segundos", "default": "1" }
+      }
+    },
+    "game_decir": {
+      "category": "game",
+      "label": "Decir",
+      "icon": "chat_bubble",
+      "fields": {
+        "msg": { "label": "Mensaje", "default": "\"Hola\"" }
+      }
+    },
+    "game_frentelibre": {
+      "category": "game_query",
+      "label": "Frente Libre",
+      "icon": "check_circle",
+      "fields": {}
+    },
+    "game_haycaja": {
+      "category": "game_query",
+      "label": "Hay Caja",
+      "icon": "inventory_2",
+      "fields": {}
+    },
+    "game_haypuerta": {
+      "category": "game_query",
+      "label": "Hay Puerta",
+      "icon": "door_front",
+      "fields": {}
+    },
+    "game_puertaabierta": {
+      "category": "game_query",
+      "label": "Puerta Abierta",
+      "icon": "door_open",
+      "fields": {}
+    },
+    "game_hayswitch": {
+      "category": "game_query",
+      "label": "Hay Switch",
+      "icon": "toggle_on",
+      "fields": {}
+    },
+    "game_llevoobjeto": {
+      "category": "game_query",
+      "label": "Llevo Objeto",
+      "icon": "backpack",
+      "fields": {}
+    },
+    "game_objetivocompleto": {
+      "category": "game_query",
+      "label": "Objetivo Completo",
+      "icon": "flag",
+      "fields": {}
+    },
+    "game_posicionx": {
+      "category": "game_query",
+      "label": "Posicion X",
+      "icon": "straighten",
+      "fields": {}
+    },
+    "game_posiciony": {
+      "category": "game_query",
+      "label": "Posicion Y",
+      "icon": "straighten",
+      "fields": {}
+    },
+    "game_direccionj": {
+      "category": "game_query",
+      "label": "Direccion Jugador",
+      "icon": "explore",
+      "fields": {}
+    },
+    "game_entregar": {
+      "category": "game",
+      "label": "Entregar a NPC",
+      "icon": "volunteer_activism",
+      "fields": {}
+    },
+    "game_hablar": {
+      "category": "game",
+      "label": "Hablar con NPC",
+      "icon": "chat",
+      "fields": {}
+    },
+    "game_hayitem": {
+      "category": "game_query",
+      "label": "Hay Item",
+      "icon": "inventory",
+      "fields": {}
+    },
+    "game_haynpc": {
+      "category": "game_query",
+      "label": "Hay NPC",
+      "icon": "person",
+      "fields": {}
+    },
+    "game_puertabloqueada": {
+      "category": "game_query",
+      "label": "Puerta Bloqueada",
+      "icon": "lock",
+      "fields": {}
+    },
+    "game_puertaprotegida": {
+      "category": "game_query",
+      "label": "Puerta Protegida",
+      "icon": "shield",
+      "fields": {}
+    },
+    "game_llevollave": {
+      "category": "game_query",
+      "label": "Lleva Llave",
+      "icon": "key",
+      "fields": {}
+    },
+    "game_llevocaja": {
+      "category": "game_query",
+      "label": "Lleva Caja",
+      "icon": "inventory_2",
+      "fields": {}
+    },
+    "game_hayitemen": {
+      "category": "game_query",
+      "label": "Hay Item En",
+      "icon": "location_on",
+      "fields": {
+        "x": { "label": "X", "default": "0" },
+        "y": { "label": "Y", "default": "0" }
+      }
+    },
+    "game_hayenemigo": {
+      "category": "game_query",
+      "label": "Hay Enemigo",
+      "icon": "skull",
+      "fields": {}
+    },
+    "game_haypiston": {
+      "category": "game_query",
+      "label": "Hay Piston",
+      "icon": "precision_manufacturing",
+      "fields": {}
+    },
+    "game_enemigoactivo": {
+      "category": "game_query",
+      "label": "Enemigo Activo",
+      "icon": "visibility",
+      "fields": {}
+    },
+    "game_pistonactivo": {
+      "category": "game_query",
+      "label": "Piston Activo",
+      "icon": "bolt",
+      "fields": {}
+    },
+    "game_inventariotamanio": {
+      "category": "game_query",
+      "label": "Tamano Inventario",
+      "icon": "inventory",
+      "fields": {}
+    },
+    "game_obtenerinventario": {
+      "category": "game_query",
+      "label": "Obtener Inventario",
+      "icon": "lookup",
+      "fields": {
+        "pos": { "label": "Pos", "default": "1" }
+      }
+    },
+    "game_moverinventario": {
+      "category": "game_action",
+      "label": "Mover Inventario",
+      "icon": "swap_vert",
+      "fields": {
+        "origen": { "label": "Origen", "default": "1" },
+        "destino": { "label": "Destino", "default": "2" }
+      }
+    },
+    "game_intercambiarinventario": {
+      "category": "game_action",
+      "label": "Intercambiar Inventario",
+      "icon": "swap_horiz",
+      "fields": {
+        "pos1": { "label": "Pos 1", "default": "1" },
+        "pos2": { "label": "Pos 2", "default": "2" }
+      }
+    },
+    "comentario": {
+      "category": "comment",
+      "label": "Comentario",
+      "icon": "comment",
+      "fields": {
+        "text": { "label": "Texto", "default": " mi comentario" }
+      }
+    }
+  }
+}
