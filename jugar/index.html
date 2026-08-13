@@ -2,7 +2,7 @@
 <html class="light" lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>DevMe — Juego</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -400,6 +400,403 @@
   max-height: 100%;
   object-fit: contain;
 }
+
+/* ============================================================
+   EDITOR TOOLBAR (Tab / Auto-indent buttons)
+   ============================================================ */
+.editor-toolbar {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.editor-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid #e8e2ce;
+  border-radius: 6px;
+  color: #9c8749;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Lexend', sans-serif;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.editor-toolbar-btn:hover {
+  background: rgba(244,192,37,0.12);
+  color: #1c180d;
+  border-color: #f4c025;
+}
+.editor-toolbar-btn:active {
+  transform: scale(0.96);
+}
+.editor-toolbar-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+.editor-toolbar-btn .btn-label {
+  font-size: 10px;
+}
+.editor-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: #e8e2ce;
+  margin: 0 2px;
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE STYLES (only for screens < 768px)
+   ============================================================ */
+@media (max-width: 767px) {
+  #sidebar { display: none !important; }
+  #sidebar-resize-handle { display: none !important; }
+  #sidebar-expand-btn { display: none !important; }
+
+  .main-tabs-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0;
+    padding: 0;
+  }
+  .main-tabs-bar::-webkit-scrollbar { display: none; }
+  .main-tab {
+    padding: 8px 14px;
+    font-size: 11px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .main-tab .material-symbols-outlined { font-size: 16px; }
+  .main-tabs-bar > div:last-child { display: none !important; }
+
+  .section-label { font-size: 10px; padding: 3px 8px; }
+  .section-label .material-symbols-outlined { font-size: 13px; }
+
+  .editor-wrapper { font-size: 12px; }
+  .line-numbers { font-size: 11px; min-width: 30px; padding: 6px 4px 6px 8px; }
+  #editor, .editor-highlight { font-size: 12px; padding: 6px 8px; }
+
+  .block-item { font-size: 11px; padding: 3px 8px; gap: 4px; }
+  .block-item .block-input { font-size: 10px; padding: 2px 4px; }
+  .block-struct-head { font-size: 11px; padding: 2px 6px !important; }
+  .block-children { padding: 2px 0 2px 8px; }
+  .block-workspace { min-height: 80px; }
+
+  #console-panel { height: 150px; }
+  .console, .errors { font-size: 11px; padding: 8px; }
+  .tabs .tab { padding: 6px 10px; font-size: 11px; }
+
+  .game-canvas-wrap { padding: 4px; }
+  #game-canvas { border-radius: 0.3rem; }
+  .game-speed-bar { font-size: 11px; padding: 0.3rem 0.5rem; }
+
+  .input-line { padding: 4px 6px; }
+  .input-line input { font-size: 11px; padding: 4px 6px; }
+  .input-line button { font-size: 10px; padding: 4px 8px; }
+
+  #split-divider { height: 4px; }
+  #split-divider-v { display: none !important; }
+  #content-wrapper { flex-direction: column !important; }
+  #editor-panel { flex: 1 !important; }
+  #game-panel { flex: 1 !important; }
+
+  #game-levels-modal > div,
+  #game-win-modal > div {
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    border-radius: 0.75rem !important;
+  }
+  #game-levels-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .search-bar { top: 4px; right: 4px; padding: 6px; font-size: 11px; }
+  .search-bar input { min-width: 120px; font-size: 11px; }
+  .autocomplete-dropdown { font-size: 11px; max-height: 160px; }
+  .autocomplete-item { padding: 5px 8px; }
+
+  /* Editor toolbar mobile */
+  .editor-toolbar { gap: 2px; }
+  .editor-toolbar-btn { padding: 2px 6px; font-size: 10px; }
+  .editor-toolbar-btn .material-symbols-outlined { font-size: 14px; }
+  .editor-toolbar-btn .btn-label { font-size: 9px; }
+  .editor-toolbar-sep { height: 14px; margin: 0 1px; }
+
+  /* FAB buttons bigger touch targets */
+  .fab-btn { width: 56px; height: 56px; }
+  .fab-btn .material-symbols-outlined { font-size: 28px; }
+  .fab-menu { min-width: 160px; max-height: 70vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .fab-menu-item { 
+    padding: 14px 16px; 
+    font-size: 14px; 
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+  }
+  .fab-menu-item .material-symbols-outlined { font-size: 22px; }
+
+  /* Mobile blocks panel improvements */
+  #mobile-blocks-panel { width: 280px; max-width: 85vw; }
+  .mobile-blocks-header { padding: 14px 14px; }
+  .mobile-blocks-header .title { font-size: 15px; }
+  .mobile-blocks-header .close-btn { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  .mobile-controls-section { padding: 12px 14px; }
+  .mobile-controls-section button,
+  .mobile-controls-section select {
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  /* Better touch targets for tabs */
+  .main-tab { padding: 10px 12px; min-height: 44px; }
+  .tabs .tab { padding: 10px 14px; font-size: 12px; min-height: 40px; }
+
+  /* Console panel slightly taller on mobile */
+  #console-panel { height: 160px; }
+
+  /* Console drag handle - more visible on mobile */
+  #split-divider { 
+    min-height: 20px; 
+    padding: 4px 0;
+    position: relative;
+  }
+  #split-divider::before {
+    content: '⋮⋮⋮';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #9c8749;
+    font-size: 12px;
+    letter-spacing: 2px;
+    opacity: 0.6;
+  }
+  #split-divider:hover::before,
+  #split-divider.active::before {
+    opacity: 1;
+    color: #1c180d;
+  }
+}
+
+/* ============================================================
+   FLOATING ACTION BUTTONS (mobile only)
+   ============================================================ */
+.fab-container {
+  display: none;
+  position: fixed;
+  z-index: 900;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.fab-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.12);
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.fab-btn:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.fab-btn .material-symbols-outlined { font-size: 26px; pointer-events: none; }
+
+#fab-exec { background: #f4c025; color: #1c180d; }
+#fab-exec.running { background: #22863a; color: #fff; }
+#fab-exec.paused { background: #e5b321; color: #1c180d; }
+
+#fab-blocks { background: #ebdef0; color: #6c3483; }
+
+.fab-menu {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #e8e2ce;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 6px;
+  display: none;
+  min-width: 180px;
+  z-index: 910;
+  -webkit-overflow-scrolling: touch;
+}
+.fab-menu.show { display: block; }
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #1c180d;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s;
+  font-family: 'Lexend', sans-serif;
+  -webkit-tap-highlight-color: rgba(244,192,37,0.2);
+  touch-action: manipulation;
+}
+.fab-menu-item:hover, .fab-menu-item:active { background: rgba(244,192,37,0.12); }
+.fab-menu-item:active { background: rgba(244,192,37,0.25); }
+.fab-menu-item .material-symbols-outlined { font-size: 20px; color: #9c8749; pointer-events: none; }
+.fab-menu-item.play { color: #22863a; }
+.fab-menu-item.play .material-symbols-outlined { color: #22863a; }
+.fab-menu-item.stop { color: #b31d28; }
+.fab-menu-item.stop .material-symbols-outlined { color: #b31d28; }
+.fab-menu-item.pause { color: #b8860b; }
+.fab-menu-item.pause .material-symbols-outlined { color: #b8860b; }
+.fab-menu-item.step { color: #0d47a1; }
+.fab-menu-item.step .material-symbols-outlined { color: #0d47a1; }
+.fab-menu-divider { height: 1px; background: #e8e2ce; margin: 4px 0; }
+
+/* Mobile blocks panel */
+#mobile-blocks-panel {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 280px;
+  max-width: 80vw;
+  background: #fcfbf8;
+  border-right: 1px solid #e8e2ce;
+  z-index: 950;
+  flex-direction: column;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+#mobile-blocks-panel.open { display: flex; transform: translateX(0); }
+#mobile-blocks-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 940;
+  backdrop-filter: blur(2px);
+}
+#mobile-blocks-overlay.show { display: block; }
+
+.mobile-blocks-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e8e2ce;
+  background: #f5f3ee;
+  flex-shrink: 0;
+}
+.mobile-blocks-header .close-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #9c8749;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+.mobile-blocks-header .title { font-size: 14px; font-weight: 700; }
+.mobile-blocks-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-controls-section {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8e2ce;
+  flex-shrink: 0;
+}
+.mobile-controls-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.mobile-ctrl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: 'Lexend', sans-serif;
+  transition: all 0.15s;
+}
+.mobile-ctrl-btn .material-symbols-outlined { font-size: 18px; }
+.mobile-ctrl-btn.play-btn { background: #22863a; color: #fff; }
+.mobile-ctrl-btn.stop-btn { background: rgba(179,29,40,0.15); color: #b31d28; }
+.mobile-ctrl-btn.pause-btn { background: rgba(229,179,33,0.2); color: #b8860b; }
+.mobile-ctrl-btn.reset-btn { background: rgba(179,29,40,0.1); color: #b31d28; }
+.mobile-ctrl-btn.step-btn { background: rgba(13,71,161,0.1); color: #0d47a1; }
+.mobile-ctrl-btn:active { transform: scale(0.95); }
+
+.mobile-speed-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9c8749;
+}
+.mobile-speed-row input[type=range] { flex: 1; accent-color: #f4c025; }
+
+.mobile-select-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.mobile-select-row select {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #e8e2ce;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'Lexend', sans-serif;
+  background: #fff;
+}
+.mobile-select-row button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e8e2ce;
+  background: #f5f3ee;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-family: 'Lexend', sans-serif;
+}
+
+@media (max-width: 767px) {
+  .fab-container { display: block; }
+}
+
+.block-drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.85;
+  transform: rotate(2deg) scale(1.05);
+  max-width: 300px;
+}
   </style>
 </head>
 <body class="bg-background-light font-display text-text-light overflow-hidden">
@@ -517,6 +914,21 @@
             <div class="section-label">
               <span class="material-symbols-outlined">edit_note</span>
               Codigo PSeInt
+              <div class="editor-toolbar" id="editor-toolbar">
+                <button class="editor-toolbar-btn" id="btn-editor-tab" title="Insertar tabulacion (Tab)">
+                  <span class="material-symbols-outlined" style="font-size:16px;">format_indent_increase</span>
+                  <span class="btn-label">Tab</span>
+                </button>
+                <button class="editor-toolbar-btn" id="btn-editor-untab" title="Quitar tabulacion (Shift+Tab)">
+                  <span class="material-symbols-outlined" style="font-size:16px;">format_indent_decrease</span>
+                  <span class="btn-label">-Tab</span>
+                </button>
+                <div class="editor-toolbar-sep"></div>
+                <button class="editor-toolbar-btn" id="btn-editor-autoindent" title="Auto-indentar todo el codigo">
+                  <span class="material-symbols-outlined" style="font-size:16px;">auto_fix_high</span>
+                  <span class="btn-label">Auto</span>
+                </button>
+              </div>
             </div>
             <div style="flex:1; min-height:0; overflow:hidden;">
               <div class="editor-wrapper" style="border-radius:0; border:none; height:100%;">
@@ -699,5 +1111,704 @@
   <script src="js/gameRuntime.js"></script>
   <script src="js/renderer.js"></script>
   <script src="js/game.js"></script>
+
+  <!-- ============================================================
+       EDITOR TOOLBAR (Tab / Auto-indent)
+       ============================================================ -->
+  <script>
+  (function() {
+    'use strict';
+    function ready(fn) {
+      if (document.readyState !== 'loading') fn();
+      else document.addEventListener('DOMContentLoaded', fn);
+    }
+
+    ready(function() {
+      var textarea = document.getElementById('editor');
+      if (!textarea) return;
+      var INDENT = '    ';
+
+      var INCREASE_NEXT = /^(algoritmo|subproceso|funcion|si\s+.*\s+entonces|sino\s+si\s+.*\s+entonces|sino|mientras\s+.*\s+hacer|para\s+.*\s+hacer|repetir|segun\s+.*\s+hacer|caso\s+.+:|de\s+otro\s+modo\s*:)\s*$/i;
+      var DECREASE_CURRENT = /^(finsi|finsegun|finmientras|finpara|finsubproceso|finfuncion|finalgoritmo|sino|sino\s+si|de\s+otro\s+modo|caso\s+.+:|hasta\s+que)\s*$/i;
+
+      // Tab button
+      var btnTab = document.getElementById('btn-editor-tab');
+      if (btnTab) {
+        btnTab.addEventListener('click', function() {
+          textarea.focus();
+          var start = textarea.selectionStart;
+          var end = textarea.selectionEnd;
+          var value = textarea.value;
+
+          if (start === end) {
+            // No selection: insert indent at cursor
+            textarea.value = value.substring(0, start) + INDENT + value.substring(start);
+            textarea.selectionStart = textarea.selectionEnd = start + INDENT.length;
+          } else {
+            // Selection: indent all selected lines
+            var lines = value.split('\n');
+            var lineStartIdx = value.lastIndexOf('\n', Math.max(start - 1, 0)) + 1;
+            var lineEndIdx = value.indexOf('\n', end);
+            if (lineEndIdx === -1) lineEndIdx = value.length;
+
+            var lStart = 0, pos = 0;
+            for (var i = 0; i < lines.length; i++) {
+              if (pos >= start) break;
+              pos += lines[i].length + 1;
+              lStart++;
+            }
+            var lEnd = lStart; pos = 0;
+            for (var i = 0; i < lines.length; i++) {
+              if (pos >= end) break;
+              pos += lines[i].length + 1;
+              lEnd = i;
+            }
+            if (lEnd < lStart) lEnd = lStart;
+
+            for (var i = lStart; i <= lEnd; i++) {
+              lines[i] = INDENT + lines[i];
+            }
+            textarea.value = lines.join('\n');
+            textarea.selectionStart = start + INDENT.length;
+            textarea.selectionEnd = end + (lEnd - lStart + 1) * INDENT.length;
+          }
+          if (window.Editor && window.Editor.update) window.Editor.update();
+        });
+      }
+
+      // Un-tab button
+      var btnUntab = document.getElementById('btn-editor-untab');
+      if (btnUntab) {
+        btnUntab.addEventListener('click', function() {
+          textarea.focus();
+          var start = textarea.selectionStart;
+          var end = textarea.selectionEnd;
+          var value = textarea.value;
+
+          if (start === end) {
+            // No selection: remove indent from current line
+            var lineStart = value.lastIndexOf('\n', start - 1) + 1;
+            var textBefore = value.substring(lineStart, start);
+            var spacesToRemove = 0;
+            for (var i = textBefore.length - 1; i >= 0 && i >= textBefore.length - 4; i--) {
+              if (textBefore[i] === ' ') spacesToRemove++;
+              else break;
+            }
+            if (spacesToRemove > 0) {
+              var removeStart = start - spacesToRemove;
+              textarea.value = value.substring(0, removeStart) + value.substring(start);
+              textarea.selectionStart = textarea.selectionEnd = removeStart;
+            }
+          } else {
+            // Selection: un-indent all selected lines
+            var lines = value.split('\n');
+            var lStart = 0, pos = 0;
+            for (var i = 0; i < lines.length; i++) {
+              if (pos >= start) break;
+              pos += lines[i].length + 1;
+              lStart++;
+            }
+            var lEnd = lStart; pos = 0;
+            for (var i = 0; i < lines.length; i++) {
+              if (pos >= end) break;
+              pos += lines[i].length + 1;
+              lEnd = i;
+            }
+            if (lEnd < lStart) lEnd = lStart;
+
+            var totalRemoved = 0;
+            for (var i = lStart; i <= lEnd; i++) {
+              if (lines[i].startsWith(INDENT)) {
+                lines[i] = lines[i].substring(INDENT.length);
+                totalRemoved += INDENT.length;
+              } else if (lines[i].startsWith('\t')) {
+                lines[i] = lines[i].substring(1);
+                totalRemoved += 1;
+              }
+            }
+            textarea.value = lines.join('\n');
+            textarea.selectionStart = Math.max(0, start - INDENT.length);
+            textarea.selectionEnd = Math.max(0, end - totalRemoved);
+          }
+          if (window.Editor && window.Editor.update) window.Editor.update();
+        });
+      }
+
+      // Auto-indent button
+      var btnAutoIndent = document.getElementById('btn-editor-autoindent');
+      if (btnAutoIndent) {
+        btnAutoIndent.addEventListener('click', function() {
+          textarea.focus();
+          var value = textarea.value;
+          var lines = value.split('\n');
+          var depth = 0;
+          var newLines = [];
+
+          for (var i = 0; i < lines.length; i++) {
+            var trimmed = lines[i].trim();
+            if (trimmed.length === 0) {
+              newLines.push('');
+              continue;
+            }
+
+            // Decrease indent for closing keywords
+            if (DECREASE_CURRENT.test(trimmed.toLowerCase())) {
+              depth = Math.max(0, depth - 1);
+            }
+
+            newLines.push(INDENT.repeat(depth) + trimmed);
+
+            // Increase indent for opening keywords
+            if (INCREASE_NEXT.test(trimmed.toLowerCase())) {
+              depth++;
+            }
+          }
+
+          textarea.value = newLines.join('\n');
+          textarea.selectionStart = textarea.selectionEnd = 0;
+          if (window.Editor && window.Editor.update) window.Editor.update();
+        });
+      }
+    });
+  })();
+  </script>
+
+  <!-- ============================================================
+       MOBILE FLOATING BUTTONS + PANELS
+       ============================================================ -->
+  <!-- Floating Execution Button -->
+  <div class="fab-container" id="fab-exec-container" style="bottom:80px;right:16px;">
+    <div class="fab-btn" id="fab-exec">
+      <span class="material-symbols-outlined">play_arrow</span>
+    </div>
+    <div class="fab-menu" id="fab-exec-menu" style="bottom:60px;right:0;">
+      <button class="fab-menu-item play" id="fab-play">
+        <span class="material-symbols-outlined">play_arrow</span> Ejecutar
+      </button>
+      <button class="fab-menu-item pause" id="fab-pause">
+        <span class="material-symbols-outlined">pause</span> Pausar
+      </button>
+      <button class="fab-menu-item stop" id="fab-stop">
+        <span class="material-symbols-outlined">stop</span> Detener
+      </button>
+      <div class="fab-menu-divider"></div>
+      <button class="fab-menu-item step" id="fab-step">
+        <span class="material-symbols-outlined">skip_next</span> Paso a paso
+      </button>
+      <button class="fab-menu-item" id="fab-reset">
+        <span class="material-symbols-outlined">restart_alt</span> Reiniciar nivel
+      </button>
+      <button class="fab-menu-item" id="fab-clear">
+        <span class="material-symbols-outlined">cleaning_services</span> Limpiar consola
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Blocks Button -->
+  <div class="fab-container" id="fab-blocks-container" style="bottom:80px;left:16px;">
+    <div class="fab-btn" id="fab-blocks">
+      <span class="material-symbols-outlined">extension</span>
+    </div>
+  </div>
+
+  <!-- Mobile Blocks Overlay -->
+  <div id="mobile-blocks-overlay"></div>
+
+  <!-- Mobile Blocks Panel -->
+  <div id="mobile-blocks-panel">
+    <div class="mobile-blocks-header">
+      <span class="material-symbols-outlined" style="color:#6c3483;font-size:20px;">extension</span>
+      <span class="title">Bloques</span>
+      <button class="close-btn" id="mobile-blocks-close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <!-- Examples & Levels Section (non-execution) -->
+    <div class="mobile-controls-section">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9c8749;">Herramientas</div>
+      <div class="mobile-select-row" style="margin-top:8px;">
+        <select id="mob-example-select" style="flex:1;"></select>
+        <button id="mob-btn-example" title="Cargar ejemplo" style="padding:6px 10px;border-radius:8px;border:1px solid #e8e2ce;background:#f5f3ee;cursor:pointer;display:flex;align-items:center;">
+          <span class="material-symbols-outlined" style="font-size:16px">upload_file</span>
+        </button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button id="mob-btn-levels" title="Niveles" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid #e8e2ce;background:#f5f3ee;cursor:pointer;font-size:12px;font-weight:600;font-family:'Lexend',sans-serif;">
+          <span class="material-symbols-outlined" style="font-size:16px">grid_view</span> Niveles
+        </button>
+        <a href="editor.html" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid #e8e2ce;background:#f5f3ee;text-decoration:none;color:#1c180d;font-size:12px;font-weight:600;font-family:'Lexend',sans-serif;">
+          <span class="material-symbols-outlined" style="font-size:16px">edit_note</span> Editor
+        </a>
+      </div>
+    </div>
+    <!-- Blocks Section -->
+    <div style="padding:8px 14px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9c8749;display:flex;align-items:center;gap:4px;">
+      <span class="material-symbols-outlined" style="font-size:14px;">extension</span> Bloques
+    </div>
+    <div class="mobile-blocks-body" id="mobile-block-palette"></div>
+  </div>
+
+  <!-- ============================================================
+       MOBILE JAVASCRIPT
+       ============================================================ -->
+  <script>
+  (function() {
+    'use strict';
+    
+    function isMobile() { return window.innerWidth < 768; }
+
+    function ready(fn) {
+      if (document.readyState !== 'loading') fn();
+      else document.addEventListener('DOMContentLoaded', fn);
+    }
+
+    ready(function() {
+      console.log('Mobile JS initialized');
+      
+      const fabExecContainer = document.getElementById('fab-exec-container');
+      const fabBlocksContainer = document.getElementById('fab-blocks-container');
+      const fabExecMenu = document.getElementById('fab-exec-menu');
+      const fabExec = document.getElementById('fab-exec');
+      const fabBlocks = document.getElementById('fab-blocks');
+      
+      if (!fabExecContainer || !fabBlocksContainer) {
+        console.error('FAB containers not found');
+        return;
+      }
+
+      // ---- Improved FAB Dragging (drag on button only, not menu) ----
+      function makeDraggable(button, container, clickHandler) {
+        let startX, startY, origLeft, origTop, dragging = false, moved = false;
+        let longPressTimer = null;
+        let isLongPress = false;
+
+        function getOrigPos() {
+          const rect = container.getBoundingClientRect();
+          origLeft = rect.left;
+          origTop = rect.top;
+        }
+
+        function onStart(e) {
+          if (!isMobile()) return;
+          // Don't drag if touching the menu
+          if (e.target.closest('.fab-menu')) return;
+          
+          const touch = e.touches ? e.touches[0] : e;
+          startX = touch.clientX;
+          startY = touch.clientY;
+          getOrigPos();
+          dragging = true;
+          moved = false;
+          isLongPress = false;
+
+          // Start long-press timer (500ms to enter drag mode)
+          longPressTimer = setTimeout(function() {
+            isLongPress = true;
+            button.style.transform = 'scale(0.9)';
+            button.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+          }, 500);
+        }
+
+        function onMove(e) {
+          if (!dragging) return;
+          const touch = e.touches ? e.touches[0] : e;
+          const dx = touch.clientX - startX;
+          const dy = touch.clientY - startY;
+          
+          if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+            moved = true;
+            clearTimeout(longPressTimer);
+            // If moved significantly, treat as drag even without long press
+            if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+              isLongPress = true;
+            }
+          }
+          
+          if (!isLongPress) return;
+          e.preventDefault();
+          e.stopPropagation();
+
+          let newX = origLeft + dx;
+          let newY = origTop + dy;
+          const w = container.offsetWidth;
+          const h = container.offsetHeight;
+          newX = Math.max(8, Math.min(window.innerWidth - w - 8, newX));
+          newY = Math.max(8, Math.min(window.innerHeight - h - 8, newY));
+
+          container.style.left = newX + 'px';
+          container.style.top = newY + 'px';
+          container.style.right = 'auto';
+          container.style.bottom = 'auto';
+        }
+
+        function onEnd(e) {
+          clearTimeout(longPressTimer);
+          button.style.transform = '';
+          button.style.boxShadow = '';
+          
+          if (dragging && !moved) {
+            // Quick tap = click
+            clickHandler();
+          } else if (dragging && moved && !isLongPress) {
+            // Small movement without long press = still a click
+            clickHandler();
+          }
+          // else: was a drag, don't trigger click
+          
+          dragging = false;
+          moved = false;
+          isLongPress = false;
+        }
+
+        // Attach drag handlers only to the button, not the container
+        button.addEventListener('mousedown', onStart);
+        button.addEventListener('touchstart', onStart, { passive: true });
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchend', onEnd);
+      }
+
+      // ---- FAB Click Handlers ----
+      function toggleExecMenu(e) {
+        if (e) e.stopPropagation();
+        fabExecMenu.classList.toggle('show');
+      }
+
+      function openMobileBlocksPanel(e) {
+        if (e) e.stopPropagation();
+        const panel = document.getElementById('mobile-blocks-panel');
+        const overlay = document.getElementById('mobile-blocks-overlay');
+        if (!panel || !overlay) return;
+        
+        panel.style.display = 'flex';
+        overlay.style.display = 'block';
+        requestAnimationFrame(function() {
+          panel.classList.add('open');
+          overlay.classList.add('show');
+        });
+        populateMobileBlocks();
+      }
+
+      // Setup draggable FABs
+      makeDraggable(fabExec, fabExecContainer, toggleExecMenu);
+      makeDraggable(fabBlocks, fabBlocksContainer, openMobileBlocksPanel);
+
+      // Prevent menu touches from triggering FAB drag
+      fabExecMenu.addEventListener('touchstart', function(e) {
+        e.stopPropagation();
+      }, { passive: true });
+      
+      fabExecMenu.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
+      });
+
+      // Close exec menu when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('#fab-exec-container') && fabExecMenu) {
+          fabExecMenu.classList.remove('show');
+        }
+      });
+
+      // ---- FAB Menu Actions ----
+      function triggerDesktopBtn(id) {
+        const btn = document.getElementById(id);
+        if (btn) {
+          console.log('Triggering button:', id);
+          btn.click();
+        } else {
+          console.warn('Button not found:', id);
+        }
+      }
+
+      // Use touchend for faster response on mobile
+      function addFastClick(elementId, handler) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        
+        let touched = false;
+        
+        el.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          touched = true;
+          handler();
+          setTimeout(function() { touched = false; }, 300);
+        }, { passive: false });
+        
+        el.addEventListener('click', function(e) {
+          if (touched) {
+            e.preventDefault();
+            return;
+          }
+          e.stopPropagation();
+          handler();
+        });
+      }
+
+      addFastClick('fab-play', function() {
+        triggerDesktopBtn('btn-run');
+        fabExecMenu.classList.remove('show');
+        fabExec.classList.add('running');
+        fabExec.querySelector('.material-symbols-outlined').textContent = 'play_circle';
+      });
+      
+      addFastClick('fab-pause', function() {
+        triggerDesktopBtn('btn-pause');
+        fabExecMenu.classList.remove('show');
+        fabExec.classList.remove('running');
+        fabExec.classList.add('paused');
+        fabExec.querySelector('.material-symbols-outlined').textContent = 'pause';
+      });
+      
+      addFastClick('fab-stop', function() {
+        triggerDesktopBtn('btn-stop');
+        fabExecMenu.classList.remove('show');
+        fabExec.classList.remove('running', 'paused');
+        fabExec.querySelector('.material-symbols-outlined').textContent = 'play_arrow';
+      });
+      
+      addFastClick('fab-step', function() {
+        const stepMode = document.getElementById('step-mode');
+        if (stepMode && !stepMode.checked) stepMode.checked = true;
+        triggerDesktopBtn('btn-run');
+        fabExecMenu.classList.remove('show');
+      });
+      
+      addFastClick('fab-reset', function() {
+        triggerDesktopBtn('btn-reset');
+        fabExecMenu.classList.remove('show');
+        fabExec.classList.remove('running', 'paused');
+        fabExec.querySelector('.material-symbols-outlined').textContent = 'play_arrow';
+      });
+      
+      addFastClick('fab-clear', function() {
+        triggerDesktopBtn('btn-clear-console');
+        fabExecMenu.classList.remove('show');
+      });
+
+      // ---- Mobile Blocks Panel ----
+      const mobilePanel = document.getElementById('mobile-blocks-panel');
+      const mobileOverlay = document.getElementById('mobile-blocks-overlay');
+
+      function closeMobileBlocksPanel() {
+        if (!mobilePanel || !mobileOverlay) return;
+        mobilePanel.classList.remove('open');
+        mobileOverlay.classList.remove('show');
+        setTimeout(function() {
+          mobilePanel.style.display = 'none';
+          mobileOverlay.style.display = 'none';
+        }, 300);
+      }
+
+      document.getElementById('mobile-blocks-close').addEventListener('click', closeMobileBlocksPanel);
+      mobileOverlay.addEventListener('click', closeMobileBlocksPanel);
+
+      // ---- Populate Mobile Blocks ----
+      function populateMobileBlocks() {
+        const mobilePal = document.getElementById('mobile-block-palette');
+        const desktopPal = document.getElementById('block-palette');
+        if (!desktopPal || !mobilePal) {
+          console.warn('Palette elements not found');
+          return;
+        }
+        mobilePal.innerHTML = desktopPal.innerHTML;
+        setupMobileBlockTap(mobilePal);
+      }
+
+      // ---- Mobile Block Tap-to-Add ----
+      function setupMobileBlockTap(container) {
+        const items = container.querySelectorAll('.block-palette-item');
+        items.forEach(function(item) {
+          item.removeAttribute('draggable');
+          item.style.cursor = 'pointer';
+
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const blockType = this.dataset.blockType;
+            if (!blockType) return;
+
+            const blocksTab = document.querySelector('.main-tab[data-main-tab="blocks"]');
+            if (blocksTab && !blocksTab.classList.contains('active')) {
+              blocksTab.click();
+            }
+
+            if (window.BlockEditor && window.BlockEditor.createBlock) {
+              const newBlock = window.BlockEditor.createBlock(blockType);
+              if (newBlock) {
+                const currentBlocks = window.BlockEditor.getBlocks();
+                currentBlocks.push(newBlock);
+                window.BlockEditor.setBlocks(currentBlocks);
+              }
+            }
+
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => { this.style.transform = ''; }, 150);
+          });
+
+          item.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+          });
+        });
+
+        const headers = container.querySelectorAll('.category-header');
+        headers.forEach(function(header) {
+          header.addEventListener('click', function() {
+            const items = this.nextElementSibling;
+            if (items) {
+              const isHidden = items.style.display === 'none';
+              items.style.display = isHidden ? 'block' : 'none';
+              const arrow = this.querySelector('.cat-arrow');
+              if (arrow) {
+                arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+              }
+            }
+          });
+        });
+      }
+
+      // ---- Mobile Controls Sync (examples/levels only) ----
+      document.getElementById('mob-example-select').addEventListener('change', function() {
+        const desktop = document.getElementById('example-select');
+        if (desktop) desktop.value = this.value;
+      });
+      
+      addFastClick('mob-btn-example', function() {
+        triggerDesktopBtn('btn-example');
+      });
+      
+      addFastClick('mob-btn-levels', function() {
+        triggerDesktopBtn('btn-levels');
+      });
+
+      // ---- Sync example select ----
+      function syncExampleSelect() {
+        const desktop = document.getElementById('example-select');
+        const mobile = document.getElementById('mob-example-select');
+        if (desktop && mobile) {
+          mobile.innerHTML = desktop.innerHTML;
+        }
+      }
+
+      // ---- Console Touch Resize ----
+      const consolePanel = document.getElementById('console-panel');
+      const splitDivider = document.getElementById('split-divider');
+      
+      if (consolePanel && splitDivider) {
+        let consoleResizing = false;
+        let consoleStartY = 0;
+        let consoleStartHeight = 0;
+
+        function startConsoleResize(clientY) {
+          consoleResizing = true;
+          consoleStartY = clientY;
+          consoleStartHeight = consolePanel.offsetHeight;
+          splitDivider.classList.add('active');
+        }
+
+        function doConsoleResize(clientY) {
+          if (!consoleResizing) return;
+          const delta = consoleStartY - clientY;
+          let newHeight = consoleStartHeight + delta;
+          const minHeight = 40;
+          const maxHeight = window.innerHeight - 100;
+          newHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
+          consolePanel.style.height = newHeight + 'px';
+        }
+
+        function endConsoleResize() {
+          if (consoleResizing) {
+            consoleResizing = false;
+            splitDivider.classList.remove('active');
+            try {
+              localStorage.setItem('consoleHeight', consolePanel.offsetHeight);
+            } catch(e) {}
+          }
+        }
+
+        // Touch events for console resize
+        splitDivider.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          startConsoleResize(touch.clientY);
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+          if (!consoleResizing) return;
+          e.preventDefault();
+          const touch = e.touches[0];
+          doConsoleResize(touch.clientY);
+        }, { passive: false });
+
+        document.addEventListener('touchend', function(e) {
+          if (consoleResizing) {
+            endConsoleResize();
+          }
+        });
+
+        // Double-tap to collapse/expand console
+        let lastTapTime = 0;
+        splitDivider.addEventListener('touchend', function(e) {
+          const now = Date.now();
+          if (now - lastTapTime < 300) {
+            // Double tap detected
+            e.preventDefault();
+            const currentHeight = consolePanel.offsetHeight;
+            if (currentHeight > 80) {
+              // Collapse to minimum
+              consolePanel.style.height = '40px';
+            } else {
+              // Expand to default
+              consolePanel.style.height = '200px';
+            }
+            try {
+              localStorage.setItem('consoleHeight', consolePanel.offsetHeight);
+            } catch(e) {}
+            lastTapTime = 0;
+          } else {
+            lastTapTime = now;
+          }
+        });
+      }
+
+      // ---- Workspace touch support ----
+      function addWorkspaceTouchSupport() {
+        const workspace = document.getElementById('block-workspace');
+        if (!workspace) return;
+      }
+
+      // ---- Initialize ----
+      syncExampleSelect();
+      addWorkspaceTouchSupport();
+
+      setTimeout(syncExampleSelect, 1000);
+      setTimeout(syncExampleSelect, 3000);
+
+      // ---- Update FAB icon based on game state ----
+      const origStatusChip = document.getElementById('game-status-chip');
+      if (origStatusChip) {
+        const observer = new MutationObserver(function() {
+          const text = origStatusChip.textContent || '';
+          if (text.includes('Ejecutando') || text.includes('Running')) {
+            fabExec.classList.add('running');
+            fabExec.classList.remove('paused');
+            fabExec.querySelector('.material-symbols-outlined').textContent = 'play_circle';
+          } else if (text.includes('Pausa') || text.includes('Paused')) {
+            fabExec.classList.remove('running');
+            fabExec.classList.add('paused');
+            fabExec.querySelector('.material-symbols-outlined').textContent = 'pause';
+          } else {
+            fabExec.classList.remove('running', 'paused');
+            fabExec.querySelector('.material-symbols-outlined').textContent = 'play_arrow';
+          }
+        });
+        observer.observe(origStatusChip, { childList: true, characterData: true, subtree: true });
+      }
+
+      console.log('Mobile JS initialization complete');
+    });
+  })();
+  </script>
 </body>
 </html>

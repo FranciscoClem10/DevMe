@@ -1339,6 +1339,17 @@ textarea.addEventListener('keyup', (e) => {
     return publicAPI;
   }
 
-  global.Editor = { init: initEditor, highlight };
+  global.Editor = {
+    init: function() {
+      var api = initEditor();
+      global.Editor._api = api;
+      return api;
+    },
+    highlight: highlight,
+    _api: null,
+    update: function() {
+      if (global.Editor._api && global.Editor._api.update) global.Editor._api.update();
+    }
+  };
 
 })(window);
